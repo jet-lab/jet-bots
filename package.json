@@ -1,0 +1,18 @@
+{
+  "name": "market-maker-ts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:jet-lab/market-maker-ts.git",
+  "author": "<mas@jetprotocol.io>",
+  "license": "MIT",
+  "scripts": {
+    "start": "ts-node src/run.ts"
+  },
+  "dependencies": {
+    "@project-serum/serum": "^0.13.65",
+    "@solana/web3.js": "^1.41.3",
+    "@tsconfig/recommended": "^1.0.1",
+    "@types/yargs": "^17.0.10",
+    "yargs": "^17.4.1"
+  }
+}
