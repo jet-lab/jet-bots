@@ -1,2 +1,2 @@
 #!/bin/bash
-yarn start
+yarn ts-node src/run.ts -s SOL/USDC

@@ -6,13 +6,17 @@
   "author": "<mas@jetprotocol.io>",
   "license": "MIT",
   "scripts": {
-    "start": "ts-node src/run.ts"
+    "clean": "rm -rf lib/",
+    "build": "yarn clean && tsc"
   },
   "dependencies": {
     "@project-serum/serum": "^0.13.65",
+    "@pythnetwork/client": "^2.6.3",
     "@solana/web3.js": "^1.41.3",
     "@tsconfig/recommended": "^1.0.1",
     "@types/yargs": "^17.0.10",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.4",
     "yargs": "^17.4.1"
   }
 }
