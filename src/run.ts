@@ -14,12 +14,6 @@ import { sleep } from './utils';
 
 (async() => {
 
-  const configuration = new Configuration();
-
-  const controller = new Controller();
-
-  const connection = new Connection(configuration.config.url, 'processed' as Commitment);
-
   const account = new Account(
     JSON.parse(
       fs.readFileSync(
@@ -28,6 +22,12 @@ import { sleep } from './utils';
       ),
     ),
   );
+
+  const configuration = new Configuration(account);
+
+  const controller = new Controller();
+
+  const connection = new Connection(configuration.config.url, 'processed' as Commitment);
 
   const market = await Market.load(configuration, connection);
 

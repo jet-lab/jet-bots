@@ -1,5 +1,5 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, Transaction } from '@solana/web3.js';
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, sendAndConfirmTransaction, Transaction } from '@solana/web3.js';
 
 import { Configuration } from './configuration';
 
@@ -25,23 +25,14 @@ export class PositionManager {
     this.baseMint = new PublicKey(baseToken.mint);
     this.quoteMint = new PublicKey(quoteToken.mint);
 
-    /*
-      {
-        "symbol": "BTC",
-        "mint": "BmvvCZaumAWsM1QZcdH892wQaqYTFCk6BDxMZnqzSkSr",
-        "mintPrivateKey": "NjmZPv7SZbY6ktlXMBJgXcSFBa3JuEICYEGF+Wk0+RGgF2OnJP2vSa8x/rTT1k94o0KUhnxd6ABzICG2g+JCnw==",
-        "mintSupply": 10000000000,
-        "faucet": "DS5afyteSUf8uiShzVWcZdS2Fp5xboTBMHdteDcY5RGe",
-        "faucetPrivateKey": "brKeFP/o+PU7MIyJPGLu9fUKJciMuWOpB1I69Oe/EWy4uPFNpkZXqf4tMDcouq86jJoS8zb80iGhW/b/8G3b2w==",
-        "faucetSupply": 9000000000,
-        "decimals": 6
-      },
-    */
+    //TODO create ATAs if they don't exist.
   }
 
   async fetchPositions()
   {
-    //const accountInfos = await getMultipleAccounts(connection, allAccounts);
+    //console.log(`  Balance = ${(await this.connection.getBalance(this.configuration.account.publicKey)) / LAMPORTS_PER_SOL} SOL`);
+    //console.log(`  BaseTokenBalance = ${JSON.stringify(await this.getTokenBalance(await this.getAssociatedTokenAddress(this.baseMint, this.configuration.account.publicKey)))}`);
+    //console.log(`  QuoteTokenBalance = ${JSON.stringify(await this.getTokenBalance(await this.getAssociatedTokenAddress(this.quoteMint, this.configuration.account.publicKey)))}`);
   }
 
   async createTokenAccount(mint: PublicKey, owner: PublicKey, payer: Keypair) {

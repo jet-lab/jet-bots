@@ -1,4 +1,5 @@
 import yargs from 'yargs/yargs';
+import { Account } from '@solana/web3.js';
 
 import CONFIG from './config.json';
 
@@ -46,6 +47,8 @@ function loadParams(params: string)
 
 export class Configuration {
 
+  account: Account;
+
   cancelOpenOrders: boolean;
   oracle: string;
   symbol: string;
@@ -55,7 +58,10 @@ export class Configuration {
   params: any;
 
   constructor(
+    account: Account,
   ) {
+    this.account = account;
+
     const argv: any = yargs(process.argv.slice(2)).options({
       c: { alias: 'cancel all open orders', default: true, type: 'boolean' },
       o: { alias: 'oracle', required: true, type: 'string' },
