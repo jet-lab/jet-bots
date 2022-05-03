@@ -1,5 +1,5 @@
 {
   "name": "fixed-spread",
-  "openOrdersRatio": 0.1,
+  "sizePercent": 0.01,
   "spreadBPS": 5
 }

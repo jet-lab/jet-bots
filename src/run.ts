@@ -55,7 +55,7 @@ import { sleep } from './utils';
         await orderManager.fetchOpenOrders(),
       ]);
 
-      await orderManager.updateOrders();
+      await orderManager.updateOrders(oracle);
 
     } catch (e) {
       console.log(e);

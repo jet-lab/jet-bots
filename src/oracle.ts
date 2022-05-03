@@ -1,3 +1,4 @@
+import { parsePriceData, PriceData } from '@pythnetwork/client'
 import { Connection, PublicKey } from '@solana/web3.js';
 
 import { Configuration } from './configuration';
@@ -8,6 +9,8 @@ export class Oracle {
   connection: Connection;
 
   address: PublicKey;
+
+  price: PriceData | undefined;
 
   pythProgramId: PublicKey;
 
@@ -27,30 +30,11 @@ export class Oracle {
 
   async fetchPrice()
   {
-    //const accountInfos = await getMultipleAccounts(connection, allAccounts);
-
-    /*
-  public static async query(connection: Connection, pythProgram: PublicKey) {
-    const programAccounts = await connection.getProgramAccounts(pythProgram, 'processed');
-    return await Promise.all(
-      programAccounts.map(account => {
-        const base = parseBaseData(account.account.data);
-        if (base != null) {
-          if (AccountType[base.type] == 'Product') {
-            const product = parseProductData(account.account.data)
-            return {
-              productAddress: account.pubkey.toBase58(),
-              priceAddress: new PublicKey(product.priceAccountKey).toBase58(),
-              ...product.product,
-            };
-          } else {
-            return undefined;
-          }
-        }
-      }).filter(product => { return product !== undefined; })
-    );
-  }
-    */
+    const accountInfo = await this.connection.getAccountInfo(this.address);
+    this.price = parsePriceData(accountInfo!.data)
+    if (this.configuration.verbose) {
+      console.log(`Oracle price = ${this.price.price}`);
+    }
   }
 
 };

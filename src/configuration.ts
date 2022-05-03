@@ -1,6 +1,6 @@
 import yargs from 'yargs/yargs';
 
-import CONFIGURATION from './configuration.json';
+import CONFIG from './config.json';
 
 function loadConfig(cluster: string)
 {
@@ -9,12 +9,18 @@ function loadConfig(cluster: string)
     case 'd':
     case 'devnet':
       {
-        return CONFIGURATION.devnet;
+        return CONFIG.devnet;
       }
     case 'l':
     case 'localhost':
       {
-        return CONFIGURATION.localnet;
+        return CONFIG.localnet;
+      }
+    case 'm':
+    case 'mainnet':
+    case 'mainnet-beta':
+      {
+        return CONFIG['mainnet-beta'];
       }
     default:
       {

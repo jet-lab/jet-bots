@@ -1,6 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 
 import { Configuration } from './configuration';
+import { Oracle } from './oracle';
 
 export class OrderManager {
 
@@ -54,30 +55,17 @@ export class OrderManager {
     //const accountInfos = await getMultipleAccounts(connection, allAccounts);
   }
 
-  async updateOrders()
+  async updateOrders(oracle: Oracle)
   {
+    //TODO add up positions and open orders to get token balances.
+
+    //const quoteSize = equity * sizePerc;
+
+    //oracle.price;
+
+    //const fairValue = (aggBid + aggAsk) / 2;
+
     /*
-  const marketIndex = marketContext.marketIndex;
-  const market = marketContext.market;
-  const bids = marketContext.bids;
-  const asks = marketContext.asks;
-  const equity = mangoAccount.computeValue(group, cache).toNumber();
-  const sizePerc = marketContext.params.sizePerc;
-  const quoteSize = equity * sizePerc;
-  const aggBid = marketContext.aggBid;
-  const aggAsk = marketContext.aggAsk;
-  if (aggBid === undefined || aggAsk === undefined) {
-    // TODO deal with this better; probably cancel all if there are any orders open
-    console.log(`${marketContext.marketName} No Agg Book`);
-    return [];
-  }
-
-  const fairValue = (aggBid + aggAsk) / 2;
-  const aggSpread = (aggAsk - aggBid) / fairValue;
-  const perpAccount = mangoAccount.perpAccounts[marketIndex];
-  // TODO look at event queue as well for unprocessed fills
-  const basePos = perpAccount.getBasePositionUi(market);
-
   const leanCoeff = marketContext.params.leanCoeff;
   const charge = (marketContext.params.charge || 0.0015) + aggSpread / 2;
   const bias = marketContext.params.bias;

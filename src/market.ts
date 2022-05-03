@@ -1,9 +1,7 @@
 import { BN } from "@project-serum/anchor";
 import {
-  decodeEventQueue,
-  DexInstructions,
   Market as SerumMarket,
-  TokenInstructions,
+  Orderbook,
 } from "@project-serum/serum";
 import {
   ORDERBOOK_LAYOUT,
@@ -22,7 +20,7 @@ export class Market {
   baseDecimals: number;
   quoteMint: PublicKey;
   quoteDecimals: number;
-  eventQueue: PublicKey;
+  //eventQueue: PublicKey;
   bids: PublicKey;
   asks: PublicKey;
   baseLotSize: BN;
@@ -47,7 +45,7 @@ export class Market {
     this.baseDecimals = market.baseDecimals;
     this.quoteMint = new PublicKey(market.quoteMint);
     this.quoteDecimals = market.quoteDecimals;
-    this.eventQueue = new PublicKey(market.eventQueue);
+    //this.eventQueue = new PublicKey(market.eventQueue);
     this.bids = new PublicKey(market.bids);
     this.asks = new PublicKey(market.asks);
     this.baseLotSize = new BN(market.baseLotSize);
@@ -68,7 +66,8 @@ export class Market {
 
   async fetchAsks()
   {
-    //const accountInfos = await getMultipleAccounts(connection, allAccounts);
+    const accountInfo = await this.connection.getAccountInfo(this.asks);
+    //console.log(`  asks = ${JSON.stringify(Orderbook.decode(this.serumMarket!, accountInfo!.data))}`);
 
     //const depth = 20; //TODO make this configurable.
     //book.ask = toPriceLevels((await this.connection.getAccountInfo(new PublicKey(market.asks), this.commitment))!.data, depth, book.baseLotSize, book.baseDecimals, book.quoteLotSize, book.quoteDecimals);
@@ -76,7 +75,8 @@ export class Market {
 
   async fetchBids()
   {
-    //const accountInfos = await getMultipleAccounts(connection, allAccounts);
+    const accountInfo = await this.connection.getAccountInfo(this.bids);
+    //console.log(`  bids = ${JSON.stringify(Orderbook.decode(this.serumMarket!, accountInfo!.data))}`);
 
     //const depth = 20; //TODO make this configurable.
     //book.bid = toPriceLevels((await this.connection.getAccountInfo(new PublicKey(market.bids), this.commitment))!.data, depth, book.baseLotSize, book.baseDecimals, book.quoteLotSize, book.quoteDecimals);
