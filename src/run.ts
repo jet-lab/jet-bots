@@ -1,81 +1,40 @@
 #!/usr/bin/env ts-node
 
 import { Commitment, Connection } from '@solana/web3.js';
-import yargs from 'yargs/yargs';
 
-import CONFIGURATION from './configuration.json';
-
-function loadConfig(url: string)
-{
-  switch (url)
-  {
-    case 'd':
-    case 'devnet':
-      {
-        return CONFIGURATION.devnet;
-      }
-    case 'l':
-    case 'localhost':
-      {
-        return CONFIGURATION.localnet;
-      }
-    default:
-      {
-        throw new Error(`Invalid url: ${url}`);
-      }
-  }
-}
-
-function sleep(ms: number) { return new Promise( resolve => setTimeout(resolve, ms) ); }
+import { Controller } from './controller';
+import { Market } from './market';
+import { Oracle } from './oracle';
+import { OrderManager } from './orderManager';
+import { PositionManager } from './positionManager';
+import { sleep } from './utils';
 
 (async() => {
 
-  const argv: any = yargs(process.argv.slice(2)).options({
-    c: { alias: 'cancel all open orders', default: true, type: 'boolean' },
-    o: { alias: 'oracle', required: true, type: 'string' },
-    s: { alias: 'symbol', required: true, type: 'string' },
-    u: { alias: 'url', required: true, type: 'string' },
-    v: { alias: 'verbose', default: false, type: 'boolean' },
-  }).argv;
+  const controller = new Controller();
 
-  const interval = 1000;
+  const connection = new Connection(controller.config.url, 'processed' as Commitment);
 
-  const control = { isRunning: true, interval: interval };
+  const orderManager = new OrderManager(connection);
+  controller.orderManager = orderManager;
 
-  process.on('SIGINT', () => {
-    console.log('Caught keyboard interrupt. Canceling orders');
-    control.isRunning = false;
-    //onExit(client, payer, mangoGroup, mangoAccount, marketContexts);
-    //process.exit();
-  });
+  const market = Market.load(connection);
 
-  process.on('unhandledRejection', (err, promise) => {
-    console.error('Unhandled rejection (promise: ', promise, ', reason: ', err, ').');
-  });
+  const oracle = new Oracle(connection);
 
-  const symbol: string = argv.s;
-  const oracle: string = argv.o;
-  const verbose: boolean = argv.v;
+  const positionManager = new PositionManager(connection);
 
-  const config = loadConfig(argv.u);
-
-  const connection = new Connection(config.url, 'processed' as Commitment);
-
-  // Load the market.
-
-  if (argv.c) {
-
-    // Cancel any open orders.
-
+  if (controller.cancelOpenOrders) {
+    await orderManager.cancelOpenOrders();
   }
 
-  console.log(`MAKING A MARKET IN ${symbol}`);
+  console.log(`MAKING A MARKET IN ${controller.symbol}`);
 
-  while (control.isRunning) {
+  while (controller.isRunning) {
     try {
 
 
-      // Get the current base and quote balances.
+      // Get the current base and quote token balances.
 
 
       // If the user doesn't have tokens do nothing.
@@ -84,16 +43,19 @@ function sleep(ms: number) { return new Promise( resolve => setTimeout(resolve, 
       // Get the oracle price.
 
 
+      // Get the open orders.
+
+
       // Update orders.
 
 
     } catch (e) {
       console.log(e);
     } finally {
-      if (verbose) {
-        console.log(`${new Date().toUTCString()} sleeping for ${control.interval / 1000}s`);
+      if (controller.verbose) {
+        console.log(`${new Date().toUTCString()} sleeping for ${controller.interval / 1000}s`);
       }
-      await sleep(control.interval);
+      await sleep(controller.interval);
     }
   }
 
