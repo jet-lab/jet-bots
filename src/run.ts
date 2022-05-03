@@ -1,7 +1,10 @@
 #!/usr/bin/env ts-node
 
-import { Commitment, Connection } from '@solana/web3.js';
+import * as fs from 'fs';
+import * as os from 'os';
+import { Account, Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';
 
+import { Configuration } from './configuration';
 import { Controller } from './controller';
 import { Market } from './market';
 import { Oracle } from './oracle';
@@ -11,48 +14,53 @@ import { sleep } from './utils';
 
 (async() => {
 
+  const configuration = new Configuration();
+
   const controller = new Controller();
 
-  const connection = new Connection(controller.config.url, 'processed' as Commitment);
+  const connection = new Connection(configuration.config.url, 'processed' as Commitment);
 
-  const orderManager = new OrderManager(connection);
+  const account = new Account(
+    JSON.parse(
+      fs.readFileSync(
+        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
+        'utf-8',
+      ),
+    ),
+  );
+
+  const market = await Market.load(configuration, connection);
+
+  const oracle = new Oracle(configuration, connection);
+
+  const orderManager = new OrderManager(configuration, connection);
   controller.orderManager = orderManager;
 
-  const market = Market.load(connection);
+  const positionManager = new PositionManager(configuration, connection);
 
-  const oracle = new Oracle(connection);
-
-  const positionManager = new PositionManager(connection);
-
-  if (controller.cancelOpenOrders) {
+  if (configuration.cancelOpenOrders) {
     await orderManager.cancelOpenOrders();
   }
 
-  console.log(`MAKING A MARKET IN ${controller.symbol}`);
+  console.log(`MAKING A MARKET IN ${configuration.symbol}`);
 
   while (controller.isRunning) {
     try {
 
+      await Promise.all([
+        await positionManager.fetchPositions(),
+        await oracle.fetchPrice(),
+        await market.fetchAsks(),
+        await market.fetchBids(),
+        await orderManager.fetchOpenOrders(),
+      ]);
 
-      // Get the current base and quote token balances.
-
-
-      // If the user doesn't have tokens do nothing.
-
-
-      // Get the oracle price.
-
-
-      // Get the open orders.
-
-
-      // Update orders.
-
+      await orderManager.updateOrders();
 
     } catch (e) {
       console.log(e);
     } finally {
-      if (controller.verbose) {
+      if (configuration.verbose) {
         console.log(`${new Date().toUTCString()} sleeping for ${controller.interval / 1000}s`);
       }
       await sleep(controller.interval);
