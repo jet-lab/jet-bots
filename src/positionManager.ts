@@ -26,16 +26,22 @@ export class PositionManager {
     this.quoteMint = new PublicKey(quoteToken.mint);
 
     //TODO create ATAs if they don't exist.
+
+    //this.getAssociatedTokenAddress(this.baseMint)
   }
+
+  balance: any;
+  baseTokenBalance: any;
+  quoteTokenBalance: any;
 
   async fetchPositions()
   {
-    //console.log(`  Balance = ${(await this.connection.getBalance(this.configuration.account.publicKey)) / LAMPORTS_PER_SOL} SOL`);
+    console.log(`  Balance = ${(await this.connection.getBalance(this.configuration.account.publicKey)) / LAMPORTS_PER_SOL} SOL`);
     //console.log(`  BaseTokenBalance = ${JSON.stringify(await this.getTokenBalance(await this.getAssociatedTokenAddress(this.baseMint, this.configuration.account.publicKey)))}`);
     //console.log(`  QuoteTokenBalance = ${JSON.stringify(await this.getTokenBalance(await this.getAssociatedTokenAddress(this.quoteMint, this.configuration.account.publicKey)))}`);
   }
 
-  async createTokenAccount(mint: PublicKey, owner: PublicKey, payer: Keypair) {
+  async createAssociatedTokenAccount(mint: PublicKey, owner: PublicKey, payer: Keypair) {
     const tokenAddress = await this.getAssociatedTokenAddress(mint, owner);
     const transaction = new Transaction().add(
       Token.createAssociatedTokenAccountInstruction(

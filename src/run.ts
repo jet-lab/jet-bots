@@ -29,9 +29,11 @@ import { sleep } from './utils';
 
   const connection = new Connection(configuration.config.url, 'processed' as Commitment);
 
-  const market = await Market.load(configuration, connection);
+  const oracleConnection = new Connection('https://api.mainnet-beta.solana.com/', 'processed' as Commitment);
 
-  const oracle = new Oracle(configuration, connection);
+  //const market = await Market.load(configuration, connection);
+
+  const oracle = new Oracle(configuration, oracleConnection);
 
   const orderManager = new OrderManager(configuration, connection);
   controller.orderManager = orderManager;
@@ -50,8 +52,8 @@ import { sleep } from './utils';
       await Promise.all([
         await positionManager.fetchPositions(),
         await oracle.fetchPrice(),
-        await market.fetchAsks(),
-        await market.fetchBids(),
+        //await market.fetchAsks(),
+        //await market.fetchBids(),
         await orderManager.fetchOpenOrders(),
       ]);
 
