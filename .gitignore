@@ -1,6 +1,5 @@
 lib/*
 node_modules/*
+test-ledger/
 yarn-error.log
 yarn.lock
-
-*.old

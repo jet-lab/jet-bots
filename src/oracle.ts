@@ -1,11 +1,14 @@
 import { parsePriceData, PriceData } from '@pythnetwork/client'
 import { Connection, PublicKey } from '@solana/web3.js';
+import assert from 'assert';
 
 import { Configuration } from './configuration';
 
 export class Oracle {
 
   configuration: Configuration;
+  mainnetConfig: any;
+
   connection: Connection;
 
   address: PublicKey;
@@ -16,16 +19,21 @@ export class Oracle {
 
   constructor(
     configuration: Configuration,
+    mainnetConfig: any,
     connection: Connection,
   ) {
     this.configuration = configuration;
+    this.mainnetConfig = mainnetConfig;
     this.connection = connection;
 
-    const oracle = configuration.config.oracles.find((oracle) => { return oracle.symbol == configuration.symbol.substring(0, configuration.symbol.length - 1); })!;
+    const oracles = Object.keys(mainnetConfig.oracles).map((key) => { return mainnetConfig.oracles[key]; });
+
+    const oracle = oracles.find((oracle) => { return oracle.symbol == configuration.symbol.substring(0, configuration.symbol.length - 1); })!;
 
     this.address = new PublicKey(oracle.address);
 
-    this.pythProgramId = new PublicKey(configuration.config.pythProgramId);
+    assert(mainnetConfig.pythProgramId);
+    this.pythProgramId = new PublicKey(mainnetConfig.pythProgramId);
   }
 
   async fetchPrice()

@@ -1,5 +1,4 @@
-import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, sendAndConfirmTransaction, Transaction } from '@solana/web3.js';
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 
 import { Configuration } from './configuration';
 
@@ -7,63 +6,36 @@ export class PositionManager {
 
   configuration: Configuration;
   connection: Connection;
-
-  baseMint: PublicKey;
-  quoteMint: PublicKey;
+  baseTokenAccount: PublicKey;
+  quoteTokenAccount: PublicKey;
 
   constructor(
     configuration: Configuration,
     connection: Connection,
+    baseTokenAccount: PublicKey,
+    quoteTokenAccount: PublicKey,
   ) {
     this.configuration = configuration;
     this.connection = connection;
-
-    const asz = configuration.symbol.split('/');
-    const baseToken = configuration.config.tokens.find((token) => { return token.symbol == asz[0]; })!;
-    const quoteToken = configuration.config.tokens.find((token) => { return token.symbol == asz[0]; })!;
-
-    this.baseMint = new PublicKey(baseToken.mint);
-    this.quoteMint = new PublicKey(quoteToken.mint);
-
-    //TODO create ATAs if they don't exist.
-
-    //this.getAssociatedTokenAddress(this.baseMint)
+    this.baseTokenAccount = baseTokenAccount;
+    this.quoteTokenAccount = quoteTokenAccount;
   }
 
-  balance: any;
-  baseTokenBalance: any;
-  quoteTokenBalance: any;
+  balance: number = 0;
+  baseTokenBalance: number = 0;
+  quoteTokenBalance: number = 0;
 
   async fetchPositions()
   {
-    console.log(`  Balance = ${(await this.connection.getBalance(this.configuration.account.publicKey)) / LAMPORTS_PER_SOL} SOL`);
-    //console.log(`  BaseTokenBalance = ${JSON.stringify(await this.getTokenBalance(await this.getAssociatedTokenAddress(this.baseMint, this.configuration.account.publicKey)))}`);
-    //console.log(`  QuoteTokenBalance = ${JSON.stringify(await this.getTokenBalance(await this.getAssociatedTokenAddress(this.quoteMint, this.configuration.account.publicKey)))}`);
-  }
+    this.balance = await this.connection.getBalance(this.configuration.account.publicKey);
+    this.baseTokenBalance = (await this.getTokenBalance(this.baseTokenAccount))!;
+    this.quoteTokenBalance = (await this.getTokenBalance(this.quoteTokenAccount))!;
 
-  async createAssociatedTokenAccount(mint: PublicKey, owner: PublicKey, payer: Keypair) {
-    const tokenAddress = await this.getAssociatedTokenAddress(mint, owner);
-    const transaction = new Transaction().add(
-      Token.createAssociatedTokenAccountInstruction(
-        ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
-        mint,
-        tokenAddress,
-        owner,
-        payer.publicKey
-      )
-    );
-    await sendAndConfirmTransaction(this.connection, transaction, [payer]);
-    return tokenAddress;
-  }
-
-  async getAssociatedTokenAddress(mint: PublicKey, owner: PublicKey) {
-    return await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      mint,
-      owner,
-    );
+    if (this.configuration.verbose) {
+      console.log(`Account balance = ${this.balance / LAMPORTS_PER_SOL} SOL`);
+      console.log(`Base token balance = ${JSON.stringify(this.baseTokenBalance)}`);
+      console.log(`Quote token balance = ${JSON.stringify(this.quoteTokenBalance)}`);
+    }
   }
 
   async getBalance(publicKey: PublicKey) {

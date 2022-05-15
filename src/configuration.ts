@@ -1,27 +1,31 @@
+import assert from 'assert';
 import yargs from 'yargs/yargs';
 import { Account } from '@solana/web3.js';
 
 import CONFIG from './config.json';
 
-function loadConfig(cluster: string)
+export function loadConfig(cluster: string): any
 {
   switch (cluster)
   {
     case 'd':
     case 'devnet':
       {
+        assert(CONFIG.devnet);
         return CONFIG.devnet;
       }
     case 'l':
-    case 'localhost':
+    case 'localnet':
       {
+        assert(CONFIG.localnet);
         return CONFIG.localnet;
       }
     case 'm':
     case 'mainnet':
     case 'mainnet-beta':
       {
-        return CONFIG['mainnet-beta'];
+        assert(CONFIG.mainnet);
+        return CONFIG.mainnet;
       }
     default:
       {
@@ -32,22 +36,13 @@ function loadConfig(cluster: string)
 
 function loadParams(params: string)
 {
-  switch (params)
-  {
-    case 'fixed-spread':
-      {
-        return require('./params/fixed-spread.json');
-      }
-    default:
-      {
-        throw new Error(`Invalid params: ${params}`);
-      }
-  }
+  return require(`./params/${params}.json`);
 }
 
 export class Configuration {
 
   account: Account;
+  openOrdersAccount: Account;
 
   cancelOpenOrders: boolean;
   oracle: string;
@@ -57,10 +52,15 @@ export class Configuration {
   config: any;
   params: any;
 
+  market: any;
+  mainnetMarket: any;
+
   constructor(
     account: Account,
+    openOrdersAccount: Account,
   ) {
     this.account = account;
+    this.openOrdersAccount = openOrdersAccount;
 
     const argv: any = yargs(process.argv.slice(2)).options({
       c: { alias: 'cancel all open orders', default: true, type: 'boolean' },
@@ -77,6 +77,12 @@ export class Configuration {
     this.symbol = argv.s;
     this.config = loadConfig(argv.u);
     this.verbose = argv.v;
+
+    const markets = Object.keys(this.config.markets).map((key) => { return this.config.markets[key]; });
+    this.market = markets.find((market) => { return market.symbol == this.symbol; })!;
+
+    const mainnetMarkets = Object.keys(CONFIG.mainnet.markets).map((key) => { return CONFIG.mainnet.markets[key]; });
+    this.mainnetMarket = mainnetMarkets.find((market) => { return market.symbol == this.symbol; })!;
   }
 
 };

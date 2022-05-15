@@ -1,7 +1,10 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { BN } from "@project-serum/anchor";
+import { Market, Orderbook, OpenOrders } from "@project-serum/serum";
+import { Order, OrderParams } from "@project-serum/serum/lib/market";
+import { Account, Connection, PublicKey, sendAndConfirmTransaction, Transaction } from '@solana/web3.js';
+import assert from 'assert';
 
 import { Configuration } from './configuration';
-import { Market } from './market';
 import { Oracle } from './oracle';
 import { PositionManager } from './positionManager';
 
@@ -9,118 +12,192 @@ export class OrderManager {
 
   configuration: Configuration;
   connection: Connection;
+  mainnetConnection: Connection;
+  market: Market;
+  mainnetMarket: Market | undefined;
+  oracle: Oracle;
+  positionManager: PositionManager;
 
   constructor(
     configuration: Configuration,
     connection: Connection,
+    mainnetConnection: Connection,
+    market: Market,
+    mainnetMarket: Market | undefined,
+    oracle: Oracle,
+    positionManager: PositionManager,
   ) {
     this.configuration = configuration;
     this.connection = connection;
+    this.mainnetConnection = mainnetConnection;
+    this.market = market;
+    this.mainnetMarket = mainnetMarket;
+    this.oracle = oracle;
+    this.positionManager = positionManager;
   }
 
   async cancelOpenOrders()
   {
+    if (this.configuration.verbose) {
+      console.log(`cancelOpenOrders`);
+    }
 
-    const instructions: TransactionInstruction[] = [
+    const openOrders = await this.market.loadOrdersForOwner(this.connection, this.configuration.account.publicKey);
 
-      makeCancelAllPerpOrdersInstruction(
-        mangoProgramId,
-        group.publicKey,
-        mangoAccount.publicKey,
-        payer.publicKey,
-        market.publicKey,
-        market.bids,
-        market.asks,
-        new BN(20),
-      ),
-
-    ];
-
+    await Promise.all(openOrders.map(async (order) => {
+      await this.market.cancelOrder(this.connection, this.configuration.account, order);
+    }));
   }
 
-  async fetchOpenOrders()
+  async updateOrders(asks: Orderbook, bids: Orderbook, openOrders: Order[])
   {
-    //const accountInfos = await getMultipleAccounts(connection, allAccounts);
-  }
+    switch (this.configuration.params.type) {
+      case 'fixed-spread':
+        {
+          const fairValue: number = this.oracle.price?.price!;
+          const halfSpread: number = fairValue * this.configuration.params.spreadBPS * 0.0001;
 
-  async updateOrders(oracle: Oracle, positionManager: PositionManager, market: Market)
-  {
-    const fairValue: number = oracle.price?.price!;
-    const halfSpread: number = fairValue * this.configuration.params.spreadBPS * 0.0001;
+          const askPrice: number = fairValue + halfSpread;
+          const bidPrice: number = fairValue - halfSpread;
 
-    const baseTokenBalance = positionManager.baseTokenBalance;
-    const quoteTokenBalance = positionManager.quoteTokenBalance;
+          //TODO implement.
 
-    const baseOpenOrdersBalance = market.baseOpenOrdersBalance;
-    const quoteOpenOrdersBalance = market.quoteOpenOrdersBalance;
+          //const baseOpenOrdersBalance = market.baseOpenOrdersBalance;
+          //const quoteOpenOrdersBalance = market.quoteOpenOrdersBalance;
+          //const accountValue = ((baseTokenBalance + baseOpenOrdersBalance) * fairValue) + (quoteTokenBalance + quoteOpenOrdersBalance);
 
-    const accountValue = ((baseTokenBalance + baseOpenOrdersBalance) * fairValue) + (quoteTokenBalance + quoteOpenOrdersBalance);
+          //const quoteSize = accountValue * this.configuration.params.sizePercent;
 
-    const quoteSize = accountValue * this.configuration.params.sizePercent;
+          break;
+        }
+      case 'replicate-mainnet':
+        {
+          let newOrders: OrderParams<Account>[] = [];
+          let staleOrders: Order[] = [];
 
-    const askPrice: number = fairValue + halfSpread;
-    const bidPrice: number = fairValue - halfSpread;
+          const depth = this.configuration.params.depth;
 
-    const instructions: TransactionInstruction[] = [
+          assert(this.mainnetMarket);
+          const [ mainnetAsk, mainnetBid ] = await Promise.all([
+            await this.mainnetMarket.loadAsks(this.mainnetConnection),
+            await this.mainnetMarket.loadBids(this.mainnetConnection),
+          ]);
 
-      makeCancelAllPerpOrdersInstruction(
-        mangoProgramId,
-        group.publicKey,
-        mangoAccount.publicKey,
-        payer.publicKey,
-        market.publicKey,
-        market.bids,
-        market.asks,
-        new BN(20),
-      ),
+          const mainnetAskPriceLevels = mainnetAsk.getL2(depth);
+          const mainnetBidPriceLevels = mainnetBid.getL2(depth);
 
-      makePlacePerpOrder2Instruction(
-        mangoProgramId,
-        group.publicKey,
-        mangoAccount.publicKey,
-        payer.publicKey,
-        cache.publicKey,
-        market.publicKey,
-        market.bids,
-        market.asks,
-        market.eventQueue,
-        mangoAccount.getOpenOrdersKeysInBasketPacked(),
-        bookAdjBid,
-        nativeBidSize,
-        I64_MAX_BN,
-        new BN(Date.now()),
-        'buy',
-        new BN(20),
-        'postOnlySlide',
-        false,
-        undefined,
-        expiryTimestamp
-      ),
+          if (openOrders.length == 0) {
+            await Promise.all(mainnetAskPriceLevels.map(async (priceLevel) => {
+              const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+              newOrders.push({
+                owner: this.configuration.account,
+                payer: this.positionManager.baseTokenAccount,
+                side: 'sell',
+                price,
+                size,
+                orderType: 'limit',
+                //clientId: undefined,
+                openOrdersAccount: this.configuration.openOrdersAccount,
+                feeDiscountPubkey: null,
+                selfTradeBehavior: 'abortTransaction',
+              });
+            }));
 
-      makePlacePerpOrder2Instruction(
-        mangoProgramId,
-        group.publicKey,
-        mangoAccount.publicKey,
-        payer.publicKey,
-        cache.publicKey,
-        market.publicKey,
-        market.bids,
-        market.asks,
-        market.eventQueue,
-        mangoAccount.getOpenOrdersKeysInBasketPacked(),
-        bookAdjAsk,
-        nativeAskSize,
-        I64_MAX_BN,
-        new BN(Date.now()),
-        'sell',
-        new BN(20),
-        'postOnlySlide',
-        false,
-        undefined,
-        expiryTimestamp
-      ),
+            await Promise.all(mainnetBidPriceLevels.map(async (priceLevel) => {
+              const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+              newOrders.push({
+                owner: this.configuration.account,
+                payer: this.positionManager.quoteTokenAccount,
+                side: 'buy',
+                price,
+                size,
+                orderType: 'limit',
+                //clientId: undefined,
+                openOrdersAccount: this.configuration.openOrdersAccount,
+                feeDiscountPubkey: null,
+                selfTradeBehavior: 'abortTransaction',
+              });
+            }));
+          } else {
+            mainnetAskPriceLevels.forEach((priceLevel) => {
+              const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+              const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
+              if (!order) {
+                newOrders.push({
+                  owner: this.configuration.account,
+                  payer: this.positionManager.baseTokenAccount,
+                  side: 'sell',
+                  price,
+                  size,
+                  orderType: 'limit',
+                  //clientId: undefined,
+                  openOrdersAccount: this.configuration.openOrdersAccount,
+                  feeDiscountPubkey: null,
+                  selfTradeBehavior: 'abortTransaction',
+                });
+              }
+            });
 
-    ];
+            openOrders.forEach((order) => {
+              if (order.side == 'sell') {
+                const priceLevel = mainnetAskPriceLevels.find((priceLevel) => {
+                  const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+                  return priceLots.eq(order.priceLots);
+                });
+                if (!priceLevel) {
+                  staleOrders.push(order);
+                }
+              }
+            });
+
+            mainnetBidPriceLevels.forEach((priceLevel) => {
+              const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+              const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
+              if (!order) {
+                newOrders.push({
+                  owner: this.configuration.account,
+                  payer: this.positionManager.quoteTokenAccount,
+                  side: 'buy',
+                  price,
+                  size,
+                  orderType: 'limit',
+                  //clientId: undefined,
+                  openOrdersAccount: this.configuration.openOrdersAccount,
+                  feeDiscountPubkey: null,
+                  selfTradeBehavior: 'abortTransaction',
+                });
+              }
+            });
+
+            openOrders.forEach((order) => {
+              if (order.side == 'buy') {
+                const priceLevel = mainnetBidPriceLevels.find((priceLevel) => {
+                  const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+                  return priceLots.eq(order.priceLots);
+                });
+                if (!priceLevel) {
+                  staleOrders.push(order);
+                }
+              }
+            });
+          }
+
+          await Promise.all(staleOrders.map(async (order) => {
+            await this.market.cancelOrder(this.connection, this.configuration.account, order);
+          }));
+
+          await Promise.all(newOrders.map(async (orderParams) => {
+            await this.market.placeOrder(this.connection, orderParams);
+          }));
+
+          break;
+        }
+      default:
+        {
+          console.log(`Unhandled params: ${this.configuration.params.type}`);
+          process.exit();
+        }
+    }
 
   }
 
