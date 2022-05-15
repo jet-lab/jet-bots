@@ -64,6 +64,7 @@ import { getAssociatedTokenAddress, sleep } from './utils';
   const positionManager = new PositionManager(configuration, connection, baseTokenAccount, quoteTokenAccount);
 
   const orderManager: OrderManager = new OrderManager(configuration, connection, mainnetConnection, market, mainnetMarket, oracle, positionManager);
+  await orderManager.initOpenOrders();
 
   if (configuration.cancelOpenOrders) {
     await orderManager.cancelOpenOrders();

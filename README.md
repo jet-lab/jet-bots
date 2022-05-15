@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This market maker bot can be used to testing on localnet or devnet. It is not recommended to use this as is for trading on mainnet. This is a very basic implementation and you will likely lose money. It can however be used as the basis to build your own profitable trading strategy.
+This market maker bot can be used for testing on localnet or devnet. It is not recommended to use this as-is for trading on mainnet; this is a very basic implementation and you will likely lose money. It can however be used as the basis to build your own profitable trading strategy.
 
 
 ## Setup
@@ -14,7 +14,7 @@ yarn install
 ```
 
 
-## Testing on Localnet
+## Running on Localnet
 
 To test on localnet you can run a local validator with the Serum DEX and SPL token faucet programs loaded.
 
@@ -25,7 +25,9 @@ cd scripts
 
 The option --bpf-program allows you to preload programs into your local validator state saving the time and effort needs to deploy the programs. To clear out the validators state, simply kill and rerun the script. The option --reset will reset the validator state. This allows you to start with a clean set of markets to test with.
 
-Once your validator is running you need to create some tokens to trade and some markets to trade them on. With your validator running go into the src directory and run create.ts.
+Once your validator is running you need to create an account and an open order account to test with. You can run create_test_accounts.sh to do this.
+
+Next, you will ned to create some tokens to trade and some markets to trade them on. With your validator running go into the src directory and run create.ts.
 
 ```shell
 cd src
