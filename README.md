@@ -51,14 +51,9 @@ While running the market making bot it is often useful to be able to inspect the
 ```
 
 
-
-
-
-
-
 ## References
 
 - This implementation was inspired by [market-maker-ts](https://github.com/blockworks-foundation/market-maker-ts/) from [🥭 Mango Markets](https://mango.markets/).
-- An excellent series from Ashpool explaining how to use Serum [](https://ashpoolin.github.io/how-tf-do-you-use-serum-ts-client), [](https://ashpoolin.github.io/the-making-of-a-market-makerer), and [](https://ashpoolin.github.io/taking-a-pythstop).
+- An excellent series from Ashpool explaining how to use Serum [How Tf Do You Use Serum Ts Client?](https://ashpoolin.github.io/how-tf-do-you-use-serum-ts-client) and [The Making Of A Market Makerer](https://ashpoolin.github.io/the-making-of-a-market-makerer).
 - And the Solana Cookbook examples on [Serum](https://solanacookbook.com/integrations/serum.html) and [Pyth](https://solanacookbook.com/integrations/pyth.html).
 - Thank you to Paul Schaaf for the [SPL token faucet](https://github.com/paul-schaaf/spl-token-faucet) and making us all BAZILLIONAIRES on DEVNET!!!
