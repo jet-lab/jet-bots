@@ -9,6 +9,10 @@ export class PositionManager {
   baseTokenAccount: PublicKey;
   quoteTokenAccount: PublicKey;
 
+  balance: number = 0;
+  baseTokenBalance: number = 0;
+  quoteTokenBalance: number = 0;
+
   constructor(
     configuration: Configuration,
     connection: Connection,
@@ -21,9 +25,17 @@ export class PositionManager {
     this.quoteTokenAccount = quoteTokenAccount;
   }
 
-  balance: number = 0;
-  baseTokenBalance: number = 0;
-  quoteTokenBalance: number = 0;
+  async init(): Promise<void>
+  {
+    //TODO check that the token accounts already exist.
+    /*
+      return await this.getTokenAccountsByOwnerForMint(
+        connection,
+        ownerAddress,
+        this.baseMintAddress,
+      );
+    */
+  }
 
   async fetchPositions()
   {
@@ -45,6 +57,11 @@ export class PositionManager {
   async getTokenBalance(tokenAddress: PublicKey) {
     const balance = await this.connection.getTokenAccountBalance(tokenAddress, 'processed');
     return balance.value.uiAmount;
+  }
+
+  async settleFunds()
+  {
+    //TODO
   }
 
 };

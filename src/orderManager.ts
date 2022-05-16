@@ -37,7 +37,7 @@ export class OrderManager {
     this.positionManager = positionManager;
   }
 
-  async initOpenOrders(): Promise<void>
+  async init(): Promise<void>
   {
     let openOrdersAccountInfo = await this.connection.getAccountInfo(this.configuration.openOrdersAccount.publicKey);
 

@@ -62,9 +62,10 @@ import { getAssociatedTokenAddress, sleep } from './utils';
   const quoteTokenAccount = await getAssociatedTokenAddress(new PublicKey(quoteToken.mint), account.publicKey);
 
   const positionManager = new PositionManager(configuration, connection, baseTokenAccount, quoteTokenAccount);
+  await positionManager.init();
 
   const orderManager: OrderManager = new OrderManager(configuration, connection, mainnetConnection, market, mainnetMarket, oracle, positionManager);
-  await orderManager.initOpenOrders();
+  await orderManager.init();
 
   if (configuration.cancelOpenOrders) {
     await orderManager.cancelOpenOrders();
@@ -91,6 +92,8 @@ import { getAssociatedTokenAddress, sleep } from './utils';
       }
 
       await orderManager.updateOrders(asks, bids, openOrders);
+
+      await positionManager.settleFunds();
 
     } catch (e) {
       console.log(e);

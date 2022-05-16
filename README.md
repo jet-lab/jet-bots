@@ -27,7 +27,7 @@ The option --bpf-program allows you to preload programs into your local validato
 
 Once your validator is running you need to create an account and an open order account to test with. You can run create_test_accounts.sh to do this.
 
-Next, you will ned to create some tokens to trade and some markets to trade them on. With your validator running go into the src directory and run create.ts.
+Next, you will need to create some tokens to trade and some markets to trade them on. With your validator running go into the src directory and run create.ts.
 
 ```shell
 cd src
@@ -36,7 +36,7 @@ cd src
 
 This will create the sample tokens and markets described in config.json. This file was generated to create test markets for localnet, and devnet. The mainnet section is the currently actively traded addresses on mainnet.
 
-Once you have created the test markets you will need some tokens to trade. On localnet and devent the script faucet.ts will airdrop you some samples tokens. From the src directory...
+Once you have created the test markets you will need some tokens to trade. On localnet and devnet the script faucet.ts will airdrop you some samples tokens. From the src directory...
 
 ```shell
 ./faucet.ts
