@@ -1,5 +1,4 @@
 #!/usr/bin/env ts-node
-
 import { Keypair } from '@solana/web3.js';
 import assert from 'assert';
 import * as fs from 'fs';

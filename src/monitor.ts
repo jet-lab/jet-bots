@@ -1,5 +1,4 @@
 #!/usr/bin/env ts-node
-
 import assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -8,7 +7,7 @@ import { decodeEventQueue, OpenOrders } from "@project-serum/serum";
 import { parsePriceData } from '@pythnetwork/client'
 import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 
-import { Configuration, loadConfig } from './configuration';
+import { loadConfig } from './configuration';
 import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from './utils';
 
 (async () => {
@@ -90,8 +89,8 @@ import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from
 
 
 
-    //const openOrdersAccountInfo = await connection.getAccountInfo(openOrdersAccount.publicKey);
-    //console.log(`  openOrdersAccountInfo = ${JSON.stringify(openOrdersAccountInfo)}`);
+    const openOrdersAccountInfo = await connection.getAccountInfo(openOrdersAccount.publicKey);
+    console.log(`  openOrdersAccountInfo = ${JSON.stringify(openOrdersAccountInfo)}`);
 
     const openOrdersAccounts = await findOpenOrdersAccounts(
       connection,
@@ -101,7 +100,7 @@ import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from
       mainnetSerumProgramId,
     );
 
-    console.log(`  activeOpenOrdersAccounts = ${JSON.stringify(openOrdersAccounts)}`);
+    console.log(`  openOrdersAccounts = ${JSON.stringify(openOrdersAccounts)}`);
 
     const openOrders = await OpenOrders.findForMarketAndOwner(
       connection,
@@ -110,7 +109,7 @@ import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from
       serumProgramId,
     );
 
-    console.log(`  openOrders = ${JSON.stringify(openOrders.length)}`);
+    console.log(`  openOrdersAccountsForMarket = ${JSON.stringify(openOrders.length)}`);
 
     console.log('');
   }

@@ -36,8 +36,7 @@ export class Oracle {
     this.pythProgramId = new PublicKey(mainnetConfig.pythProgramId);
   }
 
-  async fetchPrice()
-  {
+  async fetchPrice(): Promise<void> {
     const accountInfo = await this.connection.getAccountInfo(this.address);
     this.price = parsePriceData(accountInfo!.data)
     if (this.configuration.verbose) {

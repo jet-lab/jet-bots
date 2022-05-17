@@ -37,8 +37,7 @@ export class PositionManager {
     */
   }
 
-  async fetchPositions()
-  {
+  async fetchBalances() {
     this.balance = await this.connection.getBalance(this.configuration.account.publicKey);
     this.baseTokenBalance = (await this.getTokenBalance(this.baseTokenAccount))!;
     this.quoteTokenBalance = (await this.getTokenBalance(this.quoteTokenAccount))!;

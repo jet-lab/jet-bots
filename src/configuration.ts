@@ -1,6 +1,6 @@
+import { Account } from '@solana/web3.js';
 import assert from 'assert';
 import yargs from 'yargs/yargs';
-import { Account } from '@solana/web3.js';
 
 import CONFIG from './config.json';
 

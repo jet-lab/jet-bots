@@ -1,5 +1,4 @@
 #!/usr/bin/env ts-node
-
 import { BN } from "@project-serum/anchor";
 import { decodeEventQueue, DexInstructions } from "@project-serum/serum";
 import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, Transaction } from '@solana/web3.js';

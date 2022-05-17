@@ -1,6 +1,6 @@
 #!/usr/bin/env ts-node
-
-import { Market } from "@project-serum/serum";
+import { Market, Orderbook } from "@project-serum/serum";
+import { Order, OrderParams } from "@project-serum/serum/lib/market";
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
 import assert from 'assert';
 import * as fs from 'fs';
@@ -11,6 +11,8 @@ import { Controller } from './controller';
 import { Oracle } from './oracle';
 import { OrderManager } from './orderManager';
 import { PositionManager } from './positionManager';
+import { createStrategy } from './strategies';
+import { Strategy } from './strategies/strategy';
 import { getAssociatedTokenAddress, sleep } from './utils';
 
 (async () => {
@@ -67,23 +69,31 @@ import { getAssociatedTokenAddress, sleep } from './utils';
   const orderManager: OrderManager = new OrderManager(configuration, connection, mainnetConnection, market, mainnetMarket, oracle, positionManager);
   await orderManager.init();
 
+  const strategy: Strategy = createStrategy(
+    configuration,
+    oracle,
+    positionManager,
+    mainnetConnection,
+    mainnetMarket,
+  );
+
+  console.log(`MAKING A MARKET IN ${configuration.symbol}`);
+
   if (configuration.cancelOpenOrders) {
     await orderManager.cancelOpenOrders();
   }
-
-  console.log(`MAKING A MARKET IN ${configuration.symbol}`);
 
   const controller = new Controller();
 
   while (controller.isRunning) {
     try {
 
-      const [ asks, bids, openOrders ] = await Promise.all([
+      const [ asks, bids, openOrders, price ]: [ Orderbook, Orderbook, Order[], void, void] = await Promise.all([
         await market.loadAsks(connection),
         await market.loadBids(connection),
         await market.loadOrdersForOwner(connection, account.publicKey),
         await oracle.fetchPrice(),
-        await positionManager.fetchPositions(),
+        await positionManager.fetchBalances(),
       ]);
 
       if (configuration.verbose && asks && bids) {
@@ -91,7 +101,9 @@ import { getAssociatedTokenAddress, sleep } from './utils';
         console.log(`bids = ${JSON.stringify(bids.getL2(10))}`);
       }
 
-      await orderManager.updateOrders(asks, bids, openOrders);
+      const [ newOrders, cancelOrders ]: [OrderParams[], Order[]] = await strategy.update(asks, bids, openOrders);
+
+      await orderManager.updateOrders(newOrders, cancelOrders);
 
       await positionManager.settleFunds();
 

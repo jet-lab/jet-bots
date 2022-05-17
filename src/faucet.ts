@@ -1,5 +1,4 @@
 #!/usr/bin/env ts-node
-
 import assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
