@@ -35,7 +35,8 @@ async function monitor() {
 
 
 
-  const config = loadConfig('localnet');
+  //const config = loadConfig('localnet');
+  const config = loadConfig('devnet');
   const mainnetConfig = loadConfig('mainnet');
 
   assert(config.splTokenFaucet);
