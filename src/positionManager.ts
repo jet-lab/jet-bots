@@ -28,13 +28,12 @@ export class PositionManager {
   async init(): Promise<void>
   {
     //TODO check that the token accounts already exist.
-    /*
-      return await this.getTokenAccountsByOwnerForMint(
-        connection,
-        ownerAddress,
-        this.baseMintAddress,
-      );
-    */
+
+    //await this.getTokenAccountsByOwnerForMint(
+      //connection,
+      //ownerAddress,
+      //this.baseMintAddress,
+    //);
   }
 
   async fetchBalances() {

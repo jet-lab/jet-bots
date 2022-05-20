@@ -15,7 +15,7 @@ import { createStrategy } from './strategies';
 import { Strategy } from './strategies/strategy';
 import { getAssociatedTokenAddress, sleep } from './utils';
 
-(async () => {
+async function run() {
 
   const account = new Account(
     JSON.parse(
@@ -122,4 +122,6 @@ import { getAssociatedTokenAddress, sleep } from './utils';
 
   console.log(`MARKET MAKER EXITED`);
 
-})();
+}
+
+run();

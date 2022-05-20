@@ -6,7 +6,7 @@ import assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 
-import { loadConfig } from './configuration';
+import { Configuration, loadConfig } from './configuration';
 import { getAssociatedTokenAddress, sleep } from './utils';
 
 class CrankController {
@@ -34,7 +34,7 @@ class CrankController {
 
 };
 
-(async () => {
+async function crank() {
 
   const account = new Account(
     JSON.parse(
@@ -48,16 +48,12 @@ class CrankController {
   // @ts-ignore
   const payer: Keypair = account;
 
-
-
   const config = loadConfig('localnet');
   const mainnetConfig = loadConfig('mainnet');
 
   const connection = new Connection(config.url, 'processed' as Commitment);
 
   const controller = new CrankController();
-
-
 
   assert(config.serumProgramId);
   const serumProgramId = new PublicKey(config.serumProgramId);
@@ -133,4 +129,6 @@ class CrankController {
     }
   }
 
-})();
+}
+
+crank();

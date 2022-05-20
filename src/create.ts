@@ -6,13 +6,15 @@ import * as os from 'os';
 import { BN } from "@project-serum/anchor";
 import { decodeEventQueue, decodeRequestQueue, DexInstructions, Market, TokenInstructions } from "@project-serum/serum";
 import { AuthorityType, createSetAuthorityInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Account, Commitment, Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, sendAndConfirmTransaction, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction, TransactionInstruction } from '@solana/web3.js';
 
 import { loadConfig } from './configuration';
 
 import { getVaultOwnerAndNonce, toPriceLevels } from './utils';
 
-(async () => {
+function sleep(ms: number) { return new Promise( resolve => setTimeout(resolve, ms) ); }
+
+async function create() {
 
   const account = new Account(
     JSON.parse(
@@ -36,6 +38,20 @@ import { getVaultOwnerAndNonce, toPriceLevels } from './utils';
   const serumProgramId = new PublicKey(config.serumProgramId);
 
   const connection = new Connection(config.url, 'processed' as Commitment);
+
+
+
+  let balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
+
+  while (balance < 20) {
+    const airdropSignature = await connection.requestAirdrop(payer.publicKey, 2 * LAMPORTS_PER_SOL);
+    await connection.confirmTransaction(airdropSignature, 'confirmed' as Commitment);
+    await sleep(2000);
+    balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
+    console.log(`  Balance = ${balance} SOL`);
+    console.log('');
+  }
+
 
 
 
@@ -246,4 +262,6 @@ import { getVaultOwnerAndNonce, toPriceLevels } from './utils';
     console.log('');
   }
 
-})();
+}
+
+create();

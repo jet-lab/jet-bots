@@ -24,8 +24,8 @@ export function loadConfig(cluster: string): any
     case 'mainnet':
     case 'mainnet-beta':
       {
-        assert(CONFIG.mainnet);
-        return CONFIG.mainnet;
+        assert(CONFIG['mainnet-beta']);
+        return CONFIG['mainnet-beta'];
       }
     default:
       {
@@ -81,7 +81,7 @@ export class Configuration {
     const markets = Object.keys(this.config.markets).map((key) => { return this.config.markets[key]; });
     this.market = markets.find((market) => { return market.symbol == this.symbol; })!;
 
-    const mainnetMarkets = Object.keys(CONFIG.mainnet.markets).map((key) => { return CONFIG.mainnet.markets[key]; });
+    const mainnetMarkets = Object.keys(CONFIG['mainnet-beta'].markets).map((key) => { return CONFIG['mainnet-beta'].markets[key]; });
     this.mainnetMarket = mainnetMarkets.find((market) => { return market.symbol == this.symbol; })!;
   }
 

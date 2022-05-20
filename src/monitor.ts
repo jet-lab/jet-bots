@@ -10,7 +10,7 @@ import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey }
 import { loadConfig } from './configuration';
 import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from './utils';
 
-(async () => {
+async function monitor() {
 
   const account = new Account(
     JSON.parse(
@@ -143,4 +143,6 @@ import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from
     console.log('');
   }
 
-})();
+}
+
+monitor();

@@ -11,7 +11,7 @@ import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, 
 import { loadConfig } from './configuration';
 import { airdropTokens, getAssociatedTokenAddress } from './utils';
 
-(async () => {
+async function faucet() {
 
   const account = new Account(
     JSON.parse(
@@ -110,4 +110,6 @@ import { airdropTokens, getAssociatedTokenAddress } from './utils';
   console.log(`  quoteBalance = ${quoteBalance} ${quoteToken.symbol}`);
   console.log('');
 
-})();
+}
+
+faucet();

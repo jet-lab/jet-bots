@@ -1,12 +1,14 @@
 #!/usr/bin/env ts-node
-import { Keypair } from '@solana/web3.js';
+import { Market } from "@project-serum/serum";
+import { getMint } from "@solana/spl-token";
+import { Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';
 import assert from 'assert';
 import * as fs from 'fs';
 
-function regenerate(configuration: any) {
+function regenerateCluster(configuration: any) {
 
   const newTokens = {};
-  Object.keys(configuration.tokens).forEach((key) => {
+  for (const key in configuration.tokens) {
     const existingToken = configuration.tokens[key];
     assert(existingToken);
     const faucetKeypair = Keypair.generate();
@@ -21,10 +23,10 @@ function regenerate(configuration: any) {
       mintPrivateKey: Buffer.from(mintKeypair.secretKey).toString('base64'),
       supply: existingToken.supply,
     };
-  });
+  }
 
   const newMarkets = {};
-  Object.keys(configuration.markets).forEach((key) => {
+  for (const key in configuration.markets) {
     const existingMarket = configuration.markets[key];
     assert(existingMarket);
     const baseToken = newTokens[existingMarket.baseSymbol];
@@ -65,7 +67,7 @@ function regenerate(configuration: any) {
       quoteLotSize: existingMarket.quoteLotSize,
       feeRateBps: existingMarket.feeRateBps,
     };
-  });
+  }
 
   return {
     serumProgramId: configuration.serumProgramId,
@@ -74,18 +76,84 @@ function regenerate(configuration: any) {
     tokens: newTokens,
     markets: newMarkets,
   };
+
 }
 
-(async () => {
+async function refresh(configuration: any, connection: Connection) {
+
+  const newTokens = {};
+  for (const key in configuration.tokens) {
+    const existingToken = configuration.tokens[key];
+    assert(existingToken);
+    const mintAccount = await getMint(connection, new PublicKey(existingToken.mint));
+    newTokens[key] = {
+      symbol: existingToken.symbol,
+      mint: existingToken.mint,
+      decimals: mintAccount.decimals,
+    };
+  }
+
+  const newMarkets = {};
+  for (const key in configuration.markets) {
+    const existingMarket = configuration.markets[key];
+    assert(existingMarket);
+    const baseToken = newTokens[existingMarket.baseSymbol];
+    assert(baseToken);
+    const quoteToken = newTokens[existingMarket.quoteSymbol];
+    assert(quoteToken);
+    const market = await Market.load(connection, new PublicKey(existingMarket.market), { skipPreflight: true, commitment: 'processed' }, new PublicKey(configuration.serumProgramId));
+    assert(baseToken.mint == market.baseMintAddress.toBase58());
+    assert(quoteToken.mint == market.quoteMintAddress.toBase58());
+    newMarkets[key] = {
+      symbol: existingMarket.symbol,
+      market: existingMarket.market,
+      baseMint: baseToken.mint,
+      baseDecimals: baseToken.decimals,
+      baseVault: market.decoded.baseVault.toBase58(),
+      baseSymbol: baseToken.symbol,
+      basePrice: existingMarket.basePrice,
+      quoteMint: quoteToken.mint,
+      quoteDecimals: quoteToken.decimals,
+      quoteVault: market.decoded.quoteVault.toBase58(),
+      quoteSymbol: quoteToken.symbol,
+      quotePrice: existingMarket.quotePrice,
+      requestQueue: market.decoded.requestQueue,
+      eventQueue: market.decoded.eventQueue,
+      bids: market.decoded.bids,
+      asks: market.decoded.asks,
+      vaultSignerNonce: Number(market.decoded.vaultSignerNonce),
+      quoteDustThreshold: Number(market.decoded.quoteDustThreshold),
+      baseLotSize: Number(market.decoded.baseLotSize),
+      quoteLotSize: Number(market.decoded.quoteLotSize),
+      feeRateBps: Number(market.decoded.feeRateBps),
+    };
+  }
+
+  return {
+    pythProgramId: configuration.pythProgramId,
+    serumProgramId: configuration.serumProgramId,
+    url: configuration.url,
+    tokens: newTokens,
+    oracles: configuration.oracles,
+    markets: newMarkets,
+  };
+
+}
+
+async function regenerate() {
 
   const existingConfiguration = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
 
+  const mainnetConnection = new Connection(existingConfiguration.mainnet.url, 'processed' as Commitment);
+
   const newConfiguration = {
-    devnet: regenerate(existingConfiguration.devnet),
-    localnet: regenerate(existingConfiguration.localnet),
-    mainnet: existingConfiguration.mainnet,
+    devnet: regenerateCluster(existingConfiguration.devnet),
+    localnet: regenerateCluster(existingConfiguration.localnet),
+    mainnet: await refresh(existingConfiguration.mainnet, mainnetConnection),
   };
 
-  fs.writeFileSync('./config2.json', JSON.stringify(newConfiguration, null, 2));
+  fs.writeFileSync('./config.json.new', JSON.stringify(newConfiguration, null, 2));
 
-})();
+}
+
+regenerate();
