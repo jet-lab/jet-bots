@@ -89,7 +89,6 @@ async function run() {
   while (controller.isRunning) {
     try {
 
-      /*
       const [ asks, bids, openOrders, price ]: [ Orderbook, Orderbook, Order[], void, void] = await Promise.all([
         await market.loadAsks(connection),
         await market.loadBids(connection),
@@ -108,7 +107,6 @@ async function run() {
       await orderManager.updateOrders(newOrders, cancelOrders);
 
       await positionManager.settleFunds();
-      */
 
     } catch (e) {
       console.log(e);
