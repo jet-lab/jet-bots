@@ -60,6 +60,14 @@ export class PositionManager {
   async settleFunds()
   {
     //TODO
+    /*
+      let transaction = new Transaction().add(
+
+        settlefunds
+
+      );
+      await this.connection.sendTransaction(transaction, [this.configuration.account]);
+    */
   }
 
 };

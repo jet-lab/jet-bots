@@ -1,3 +1,6 @@
+import assert from 'assert';
+
+import { OrderManager } from './orderManager';
 import { sleep } from './utils';
 
 export class Controller {
@@ -6,6 +9,7 @@ export class Controller {
   interval = 1000;
 
   constructor(
+    orderManager: OrderManager,
   ) {
     process.on('SIGINT', async () => {
 
@@ -16,6 +20,13 @@ export class Controller {
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
+      await orderManager.cancelOpenOrders();
+
+      await orderManager.closeOpenOrdersAccounts();
+
+      console.log(`MARKET MAKER EXITED`);
+
+      process.exit();
     });
 
     process.on('unhandledRejection', (err, promise) => {

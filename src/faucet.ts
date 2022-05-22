@@ -1,12 +1,12 @@
 #!/usr/bin/env ts-node
-import assert from 'assert';
-import * as fs from 'fs';
-import * as os from 'os';
 
 import { BN } from "@project-serum/anchor";
 import { parsePriceData } from '@pythnetwork/client'
 import { createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, sendAndConfirmTransaction, Transaction } from '@solana/web3.js';
+import assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
 
 import { loadConfig } from './configuration';
 import { airdropTokens, getAssociatedTokenAddress } from './utils';

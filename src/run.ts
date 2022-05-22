@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
 import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js';
@@ -83,11 +84,12 @@ async function run() {
     await orderManager.cancelOpenOrders();
   }
 
-  const controller = new Controller();
+  const controller = new Controller(orderManager);
 
   while (controller.isRunning) {
     try {
 
+      /*
       const [ asks, bids, openOrders, price ]: [ Orderbook, Orderbook, Order[], void, void] = await Promise.all([
         await market.loadAsks(connection),
         await market.loadBids(connection),
@@ -106,6 +108,7 @@ async function run() {
       await orderManager.updateOrders(newOrders, cancelOrders);
 
       await positionManager.settleFunds();
+      */
 
     } catch (e) {
       console.log(e);
@@ -118,9 +121,7 @@ async function run() {
     }
   }
 
-  await orderManager.cancelOpenOrders();
-
-  console.log(`MARKET MAKER EXITED`);
+  console.log(`MARKET MAKER STOPPING`);
 
 }
 

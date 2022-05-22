@@ -7,6 +7,7 @@ import assert from 'assert';
 import { Configuration } from './configuration';
 import { Oracle } from './oracle';
 import { PositionManager } from './positionManager';
+import { findOpenOrdersAccounts, getAssociatedTokenAddress } from './utils';
 
 export class OrderManager {
 
@@ -76,6 +77,58 @@ export class OrderManager {
     await Promise.all(openOrders.map(async (order) => {
       await this.market.cancelOrder(this.connection, this.configuration.account, order);
     }));
+  }
+
+  async closeOpenOrdersAccounts()
+  {
+    if (this.configuration.verbose) {
+      console.log(`closeOpenOrdersAccounts`);
+    }
+
+    const openOrdersAccounts = await findOpenOrdersAccounts(
+      this.connection,
+      this.market.address,
+      this.configuration.account.publicKey,
+      this.market.programId,
+      this.mainnetMarket.programId,
+    );
+
+    const baseWallet = await getAssociatedTokenAddress(new PublicKey(this.market.baseMintAddress), this.configuration.account.publicKey);
+    const quoteWallet = await getAssociatedTokenAddress(new PublicKey(this.market.quoteMintAddress), this.configuration.account.publicKey);
+
+    // @ts-ignore
+    const vaultSigner = await PublicKey.createProgramAddress(
+      [
+        this.market.address.toBuffer(),
+        this.market.decoded.vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      this.market.programId,
+    );
+
+    for (const openOrdersAccount of openOrdersAccounts) {
+      let transaction = new Transaction().add(
+        DexInstructions.settleFunds({
+          market: this.market.address,
+          openOrders: openOrdersAccount,
+          owner: this.configuration.account.publicKey,
+          baseVault: this.market.decoded.baseVault,
+          quoteVault: this.market.decoded.quoteVault,
+          baseWallet,
+          quoteWallet,
+          vaultSigner,
+          programId: this.market.programId,
+          //TODO referrerQuoteWallet,
+        }),
+        DexInstructions.closeOpenOrders({
+          market: this.market.address,
+          openOrders: openOrdersAccount,
+          owner: this.configuration.account.publicKey,
+          solWallet: this.configuration.account.publicKey,
+          programId: this.market.programId,
+        })
+      );
+      await this.connection.sendTransaction(transaction, [this.configuration.account]);
+    }
   }
 
   async updateOrders(newOrders: OrderParams[], cancelOrders: Order[])

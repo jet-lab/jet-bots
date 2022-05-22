@@ -1,11 +1,11 @@
 #!/usr/bin/env ts-node
+
+import { decodeEventQueue, Market, OpenOrders } from "@project-serum/serum";
+import { parsePriceData } from '@pythnetwork/client'
+import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
-
-import { decodeEventQueue, OpenOrders } from "@project-serum/serum";
-import { parsePriceData } from '@pythnetwork/client'
-import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 
 import { loadConfig } from './configuration';
 import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from './utils';
@@ -90,8 +90,8 @@ async function monitor() {
 
 
 
-    const openOrdersAccountInfo = await connection.getAccountInfo(openOrdersAccount.publicKey);
-    console.log(`  openOrdersAccountInfo = ${JSON.stringify(openOrdersAccountInfo)}`);
+    //const openOrdersAccountInfo = await connection.getAccountInfo(openOrdersAccount.publicKey);
+    //console.log(`  openOrdersAccountInfo = ${JSON.stringify(openOrdersAccountInfo)}`);
 
     const openOrdersAccounts = await findOpenOrdersAccounts(
       connection,
@@ -110,7 +110,7 @@ async function monitor() {
       serumProgramId,
     );
 
-    console.log(`  openOrdersAccountsForMarket = ${JSON.stringify(openOrders.length)}`);
+    console.log(`  openOrdersAccountsForMarketAndOwner = ${JSON.stringify(openOrders.length)}`);
 
     console.log('');
   }
@@ -134,15 +134,6 @@ async function monitor() {
   }
 
   console.log('');
-
-
-
-  // SCRATCH PAD
-  if (true && false) {
-    const accountInfo = await connection.getParsedAccountInfo(new PublicKey('29qQyadtiKexH3Vuri551eoEDXxZCYc3uAWDz2k6cAJw'));
-    console.log(`${JSON.stringify(accountInfo)}`);
-    console.log('');
-  }
 
 }
 

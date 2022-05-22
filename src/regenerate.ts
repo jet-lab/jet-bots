@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+
 import { Market } from "@project-serum/serum";
 import { getMint } from "@solana/spl-token";
 import { Commitment, Connection, Keypair, PublicKey } from '@solana/web3.js';

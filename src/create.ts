@@ -1,12 +1,12 @@
 #!/usr/bin/env ts-node
-import assert from 'assert';
-import * as fs from 'fs';
-import * as os from 'os';
 
 import { BN } from "@project-serum/anchor";
 import { decodeEventQueue, decodeRequestQueue, DexInstructions, Market, TokenInstructions } from "@project-serum/serum";
 import { AuthorityType, createSetAuthorityInstruction, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, sendAndConfirmTransaction, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction, TransactionInstruction } from '@solana/web3.js';
+import assert from 'assert';
+import * as fs from 'fs';
+import * as os from 'os';
 
 import { loadConfig } from './configuration';
 
