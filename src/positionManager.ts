@@ -1,4 +1,5 @@
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { DexInstructions, Market } from "@project-serum/serum";
+import { Connection, LAMPORTS_PER_SOL, PublicKey, Transaction } from '@solana/web3.js';
 
 import { Configuration } from './configuration';
 
@@ -8,6 +9,7 @@ export class PositionManager {
   connection: Connection;
   baseTokenAccount: PublicKey;
   quoteTokenAccount: PublicKey;
+  market: Market;
 
   balance: number = 0;
   baseTokenBalance: number = 0;
@@ -18,11 +20,13 @@ export class PositionManager {
     connection: Connection,
     baseTokenAccount: PublicKey,
     quoteTokenAccount: PublicKey,
+    market: Market,
   ) {
     this.configuration = configuration;
     this.connection = connection;
     this.baseTokenAccount = baseTokenAccount;
     this.quoteTokenAccount = quoteTokenAccount;
+    this.market = market;
   }
 
   async init(): Promise<void>
@@ -59,15 +63,41 @@ export class PositionManager {
 
   async settleFunds()
   {
-    //TODO
-    /*
-      let transaction = new Transaction().add(
+    if (this.configuration.verbose) {
+      console.log(`settleFunds`);
+    }
 
-        settlefunds
+    // @ts-ignore
+    const vaultSigner = await PublicKey.createProgramAddress(
+      [
+        this.market.address.toBuffer(),
+        this.market.decoded.vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      this.market.programId,
+    );
 
-      );
-      await this.connection.sendTransaction(transaction, [this.configuration.account]);
-    */
+    let transaction = new Transaction().add(
+      DexInstructions.settleFunds({
+        market: this.market.address,
+        openOrders: this.configuration.openOrdersAccount.publicKey,
+        owner: this.configuration.account.publicKey,
+        baseVault: this.market.decoded.baseVault,
+        quoteVault: this.market.decoded.quoteVault,
+        baseWallet: this.baseTokenAccount,
+        quoteWallet: this.quoteTokenAccount,
+        vaultSigner,
+        programId: this.market.programId,
+        //TODO referrerQuoteWallet,
+      }),
+      DexInstructions.closeOpenOrders({
+        market: this.market.address,
+        openOrders: this.configuration.openOrdersAccount.publicKey,
+        owner: this.configuration.account.publicKey,
+        solWallet: this.configuration.account.publicKey,
+        programId: this.market.programId,
+      })
+    );
+    await this.connection.sendTransaction(transaction, [this.configuration.account]);
   }
 
 };

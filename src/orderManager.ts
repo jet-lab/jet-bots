@@ -106,19 +106,27 @@ export class OrderManager {
     );
 
     for (const openOrdersAccount of openOrdersAccounts) {
-      let transaction = new Transaction().add(
-        DexInstructions.settleFunds({
-          market: this.market.address,
-          openOrders: openOrdersAccount,
-          owner: this.configuration.account.publicKey,
-          baseVault: this.market.decoded.baseVault,
-          quoteVault: this.market.decoded.quoteVault,
-          baseWallet,
-          quoteWallet,
-          vaultSigner,
-          programId: this.market.programId,
-          //TODO referrerQuoteWallet,
-        }),
+
+      let transaction = new Transaction();
+
+      if (this.positionManager.baseTokenBalance != 0 || this.positionManager.quoteTokenBalance != 0) {
+        transaction.add(
+          DexInstructions.settleFunds({
+            market: this.market.address,
+            openOrders: openOrdersAccount,
+            owner: this.configuration.account.publicKey,
+            baseVault: this.market.decoded.baseVault,
+            quoteVault: this.market.decoded.quoteVault,
+            baseWallet,
+            quoteWallet,
+            vaultSigner,
+            programId: this.market.programId,
+            //TODO referrerQuoteWallet,
+          })
+        );
+      }
+
+      transaction.add(
         DexInstructions.closeOpenOrders({
           market: this.market.address,
           openOrders: openOrdersAccount,
@@ -127,6 +135,7 @@ export class OrderManager {
           programId: this.market.programId,
         })
       );
+
       await this.connection.sendTransaction(transaction, [this.configuration.account]);
     }
   }

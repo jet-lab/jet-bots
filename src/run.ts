@@ -50,6 +50,7 @@ async function run() {
   assert(mainnetConfig.serumProgramId);
   const mainnetSerumProgramId = new PublicKey(mainnetConfig.serumProgramId);
 
+  //TODO multiple markets.
   const market = await Market.load(connection, new PublicKey(configuration.market.market), { skipPreflight: true, commitment: 'processed' }, serumProgramId);
   const mainnetMarket = await Market.load(mainnetConnection, new PublicKey(configuration.mainnetMarket.market), { skipPreflight: true, commitment: 'processed' }, mainnetSerumProgramId);
 
@@ -64,12 +65,13 @@ async function run() {
   const baseTokenAccount = await getAssociatedTokenAddress(new PublicKey(baseToken.mint), account.publicKey);
   const quoteTokenAccount = await getAssociatedTokenAddress(new PublicKey(quoteToken.mint), account.publicKey);
 
-  const positionManager = new PositionManager(configuration, connection, baseTokenAccount, quoteTokenAccount);
+  const positionManager = new PositionManager(configuration, connection, baseTokenAccount, quoteTokenAccount, market);
   await positionManager.init();
 
   const orderManager: OrderManager = new OrderManager(configuration, connection, mainnetConnection, market, mainnetMarket, oracle, positionManager);
   await orderManager.init();
 
+  //TODO multiple strategies.
   const strategy: Strategy = createStrategy(
     configuration,
     oracle,
@@ -106,7 +108,9 @@ async function run() {
 
       await orderManager.updateOrders(newOrders, cancelOrders);
 
-      await positionManager.settleFunds();
+      if (positionManager.baseTokenBalance != 0 || positionManager.quoteTokenBalance != 0) {
+        await positionManager.settleFunds();
+      }
 
     } catch (e) {
       console.log(e);
