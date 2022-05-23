@@ -11,49 +11,15 @@ import * as os from 'os';
 import { loadConfig } from './configuration';
 import { airdropTokens, getAssociatedTokenAddress } from './utils';
 
-async function faucet() {
-
-  const account = new Account(
-    JSON.parse(
-      fs.readFileSync(
-        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
-        'utf-8',
-      ),
-    ),
-  );
-
-  // @ts-ignore
-  const payer: Keypair = account;
-
-
-
-  const config = loadConfig('localnet');
-  const mainnetConfig = loadConfig('mainnet');
-
-  assert(config.splTokenFaucet);
-  const splTokenFaucet = new PublicKey(config.splTokenFaucet);
-
-  const connection = new Connection(config.url, 'processed' as Commitment);
-  const mainnetConnection = new Connection(mainnetConfig.url, 'processed' as Commitment);
-
-
-
-  // Get enough SOL to pay for transactions.
-  let balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
-
-  if (balance < 10) {
-    const airdropSignature = await connection.requestAirdrop(payer.publicKey, 10 * LAMPORTS_PER_SOL);
-    await connection.confirmTransaction(airdropSignature, 'confirmed' as Commitment);
-  }
-
-
-
-  // Assume we want 10k in USDC and whatever base token we are trading.
-  const quoteAmount = 10_000_000;
-
-  const baseToken = config.tokens.SOL;
-  const quoteToken = config.tokens.USDC;
-  const oracle = mainnetConfig.oracles.SOL_USD;
+async function fundAccounts(
+  connection: Connection,
+  mainnetConnection: Connection,
+  oracle: any,
+  baseToken: any,
+  quoteToken: any,
+  quoteAmount: number,
+  splTokenFaucet: PublicKey,
+) {
 
   // Get the current token price from Pyth.
   const accountInfo = await mainnetConnection.getAccountInfo(new PublicKey(oracle.address));
@@ -62,6 +28,36 @@ async function faucet() {
   const basePrice = pythPrice.price;
 
   const baseAmount = quoteAmount / basePrice;
+
+  await fundAccount('maker', connection, baseToken, baseAmount, quoteToken, quoteAmount, splTokenFaucet);
+  await fundAccount('taker', connection, baseToken, baseAmount, quoteToken, quoteAmount, splTokenFaucet);
+
+}
+
+async function fundAccount(
+  name: string,
+  connection: Connection,
+  baseToken: any,
+  baseAmount: number,
+  quoteToken: any,
+  quoteAmount: number,
+  splTokenFaucet: PublicKey,
+) {
+
+  console.log(`fundAccount("${name}")`);
+
+  const account = new Account(JSON.parse(fs.readFileSync(os.homedir() + `/.config/solana/${name}.json`, 'utf-8')));
+
+  // @ts-ignore
+  const payer: Keypair = account;
+
+  // Get enough SOL to pay for transactions.
+  let balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
+
+  if (balance < 10) {
+    const airdropSignature = await connection.requestAirdrop(payer.publicKey, 10 * LAMPORTS_PER_SOL);
+    await connection.confirmTransaction(airdropSignature, 'confirmed' as Commitment);
+  }
 
   const [ baseTokenAccount, quoteTokenAccount ] = await Promise.all([
     await getAssociatedTokenAddress(new PublicKey(baseToken.mint), payer.publicKey),
@@ -98,8 +94,6 @@ async function faucet() {
     await airdropTokens(connection, splTokenFaucet, payer, new PublicKey(quoteToken.faucet), quoteTokenAccount, new BN(quoteAmount).mul(new BN(10 ** quoteToken.decimals))),
   ]);
 
-
-
   balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
   const baseBalance = (await connection.getTokenAccountBalance(baseTokenAccount)).value.uiAmount;
   const quoteBalance = (await connection.getTokenAccountBalance(quoteTokenAccount)).value.uiAmount;
@@ -109,6 +103,26 @@ async function faucet() {
   console.log(`  baseBalance = ${baseBalance} ${baseToken.symbol}`);
   console.log(`  quoteBalance = ${quoteBalance} ${quoteToken.symbol}`);
   console.log('');
+
+}
+
+async function faucet() {
+
+  const config = loadConfig('devnet');
+  const mainnetConfig = loadConfig('mainnet');
+
+  assert(config.splTokenFaucet);
+  const splTokenFaucet = new PublicKey(config.splTokenFaucet);
+
+  const connection = new Connection(config.url, 'processed' as Commitment);
+  const mainnetConnection = new Connection(mainnetConfig.url, 'processed' as Commitment);
+
+  // Assume we want 10mm in USDC and whatever base token we are trading.
+  const quoteAmount = 10_000_000;
+
+  await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.BTC_USD, config.tokens.BTC, config.tokens.USDC, quoteAmount, splTokenFaucet);
+  await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.ETH_USD, config.tokens.ETH, config.tokens.USDC, quoteAmount, splTokenFaucet);
+  await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.SOL_USD, config.tokens.SOL, config.tokens.USDC, quoteAmount, splTokenFaucet);
 
 }
 

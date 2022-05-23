@@ -43,23 +43,22 @@ export async function findOpenOrdersAccounts(
   market: PublicKey,
   owner: PublicKey,
   programId: PublicKey,
-  mainnetProgramId: PublicKey,
 ): Promise<PublicKey[]> {
   const filters = [
     {
       memcmp: {
-        offset: OpenOrders.getLayout(mainnetProgramId).offsetOf('market'),
+        offset: OpenOrders.getLayout(programId).offsetOf('market'),
         bytes: market.toBase58(),
       },
     },
     {
       memcmp: {
-        offset: OpenOrders.getLayout(mainnetProgramId).offsetOf('owner'),
+        offset: OpenOrders.getLayout(programId).offsetOf('owner'),
         bytes: owner.toBase58(),
       },
     },
     {
-      dataSize: OpenOrders.getLayout(mainnetProgramId).span,
+      dataSize: OpenOrders.getLayout(programId).span,
     },
   ];
   const accounts = await getFilteredProgramAccounts(

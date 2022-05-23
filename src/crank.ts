@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+
 import { BN } from "@project-serum/anchor";
 import { decodeEventQueue, DexInstructions } from "@project-serum/serum";
 import { Account, Commitment, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, Transaction } from '@solana/web3.js';
@@ -6,54 +7,17 @@ import assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 
-import { Configuration, loadConfig } from './configuration';
+import { loadConfig } from './configuration';
 import { getAssociatedTokenAddress, sleep } from './utils';
-
-class CrankController {
-
-  isRunning = true;
-  interval = 1000;
-
-  constructor(
-  ) {
-    process.on('SIGINT', async () => {
-      console.log('Caught keyboard interrupt.');
-
-      this.isRunning = false;
-
-      // Wait for the main loop to  exit.
-      await sleep(this.interval);
-
-      process.exit();
-    });
-
-    process.on('unhandledRejection', (err, promise) => {
-      console.error('Unhandled rejection (promise: ', promise, ', reason: ', err, ').');
-    });
-  }
-
-};
 
 async function crank() {
 
-  const account = new Account(
-    JSON.parse(
-      fs.readFileSync(
-        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
-        'utf-8',
-      ),
-    ),
-  );
+  const payer = Keypair.generate();
 
-  // @ts-ignore
-  const payer: Keypair = account;
-
-  const config = loadConfig('localnet');
-  const mainnetConfig = loadConfig('mainnet');
+  //const config = loadConfig('localnet');
+  const config = loadConfig('devnet');
 
   const connection = new Connection(config.url, 'processed' as Commitment);
-
-  const controller = new CrankController();
 
   assert(config.serumProgramId);
   const serumProgramId = new PublicKey(config.serumProgramId);
@@ -77,7 +41,27 @@ async function crank() {
     feeTokenAccounts.set(token.mint, tokenAccount);
   })
 
-  while (controller.isRunning) {
+  let interval = 1000;
+  let isRunning = true;
+
+  process.on('SIGINT', async () => {
+    console.log('Caught keyboard interrupt. Exiting.');
+
+    isRunning = false;
+
+    // Wait for the main loop to  exit.
+    await sleep(interval);
+
+    process.exit();
+  });
+
+  process.on('unhandledRejection', (err, promise) => {
+    console.error('Unhandled rejection (promise: ', promise, ', reason: ', err, ').');
+  });
+
+  console.log(`RUNNING SERUM CRANK`);
+
+  while (isRunning) {
     try {
 
       let balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
@@ -91,7 +75,7 @@ async function crank() {
         console.log('');
       }
 
-      await Promise.all(markets.map(async (market) => {
+      for (const market of markets) {
         const accountInfo = await connection.getAccountInfo(new PublicKey(market.eventQueue));
         if (accountInfo) {
           const events = decodeEventQueue(accountInfo.data);
@@ -117,15 +101,16 @@ async function crank() {
               );
               transaction.feePayer = payer.publicKey;
               await connection.sendTransaction(transaction, [payer]);
+              await sleep(interval);
             }
           }
         }
-      }));
+      }
 
     } catch (e) {
       console.log(e);
     } finally {
-      await sleep(controller.interval);
+      await sleep(interval);
     }
   }
 

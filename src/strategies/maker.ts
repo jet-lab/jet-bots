@@ -4,42 +4,43 @@ import { Order, OrderParams } from "@project-serum/serum/lib/market";
 import { Account, Connection } from '@solana/web3.js';
 import assert from 'assert';
 
-import { Configuration } from '../configuration';
-import { Oracle } from '../oracle';
-import { PositionManager } from '../positionManager';
+import { Position } from '../position';
 import { Strategy } from './strategy';
 
-export class ReplicateMainnet extends Strategy {
+import PARAMS from '../params/maker.json';
+
+export class Maker extends Strategy {
 
   mainnetConnection: Connection;
-  mainnetMarket: Market;
+  mainnetMarkets: Market[];
 
   constructor(
-    configuration: Configuration,
-    oracle: Oracle,
-    positionManager: PositionManager,
+    connection: Connection,
+    account: Account,
+    positions: Position[],
+    markets: Market[],
     mainnetConnection: Connection,
-    mainnetMarket: Market,
-    ) {
+    mainnetMarkets: Market[],
+  ) {
     super(
-      configuration,
-      oracle,
-      positionManager,
+      connection,
+      account,
+      positions,
+      markets,
     );
     this.mainnetConnection = mainnetConnection;
-    this.mainnetMarket = mainnetMarket;
+    this.mainnetMarkets = mainnetMarkets;
   }
 
-  async update(asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
+  async update(marketIndex: number, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
     let newOrders: OrderParams[] = [];
     let staleOrders: Order[] = [];
 
-    const depth = this.configuration.params.depth;
+    const depth = PARAMS.depth;
 
-    assert(this.mainnetMarket);
     const [ mainnetAsk, mainnetBid ] = await Promise.all([
-      await this.mainnetMarket.loadAsks(this.mainnetConnection),
-      await this.mainnetMarket.loadBids(this.mainnetConnection),
+      await this.mainnetMarkets[marketIndex].loadAsks(this.mainnetConnection),
+      await this.mainnetMarkets[marketIndex].loadBids(this.mainnetConnection),
     ]);
 
     const mainnetAskPriceLevels = mainnetAsk.getL2(depth);
@@ -50,15 +51,14 @@ export class ReplicateMainnet extends Strategy {
       mainnetAskPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
         newOrders.push({
-          owner: this.configuration.account,
-          payer: this.positionManager.baseTokenAccount,
+          owner: this.account,
+          payer: this.positions[marketIndex].baseTokenAccount,
           side: 'sell',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.configuration.openOrdersAccount.publicKey,
-          openOrdersAccount: this.configuration.openOrdersAccount,
+          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
           feeDiscountPubkey: null,
           selfTradeBehavior: 'abortTransaction',
         });
@@ -67,15 +67,14 @@ export class ReplicateMainnet extends Strategy {
       mainnetBidPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
         newOrders.push({
-          owner: this.configuration.account,
-          payer: this.positionManager.quoteTokenAccount,
+          owner: this.account,
+          payer: this.positions[marketIndex].quoteTokenAccount,
           side: 'buy',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.configuration.openOrdersAccount.publicKey,
-          openOrdersAccount: this.configuration.openOrdersAccount,
+          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
           feeDiscountPubkey: null,
           selfTradeBehavior: 'abortTransaction',
         });
@@ -87,15 +86,14 @@ export class ReplicateMainnet extends Strategy {
         const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
         if (!order) {
           newOrders.push({
-            owner: this.configuration.account,
-            payer: this.positionManager.baseTokenAccount,
+            owner: this.account,
+            payer: this.positions[marketIndex].baseTokenAccount,
             side: 'sell',
             price,
             size,
             orderType: 'limit',
             //clientId: undefined,
-            openOrdersAddressKey: this.configuration.openOrdersAccount.publicKey,
-            openOrdersAccount: this.configuration.openOrdersAccount,
+            openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
             feeDiscountPubkey: null,
             selfTradeBehavior: 'abortTransaction',
           });
@@ -119,15 +117,14 @@ export class ReplicateMainnet extends Strategy {
         const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
         if (!order) {
           newOrders.push({
-            owner: this.configuration.account,
-            payer: this.positionManager.quoteTokenAccount,
+            owner: this.account,
+            payer: this.positions[marketIndex].quoteTokenAccount,
             side: 'buy',
             price,
             size,
             orderType: 'limit',
             //clientId: undefined,
-            openOrdersAddressKey: this.configuration.openOrdersAccount.publicKey,
-            openOrdersAccount: this.configuration.openOrdersAccount,
+            openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
             feeDiscountPubkey: null,
             selfTradeBehavior: 'abortTransaction',
           });

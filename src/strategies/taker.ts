@@ -1,26 +1,29 @@
-import { Orderbook } from "@project-serum/serum";
+import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
+import { Account, Connection } from '@solana/web3.js';
 
-import { Configuration } from '../configuration';
-import { Oracle } from '../oracle';
-import { PositionManager } from '../positionManager';
+import { Position } from '../position';
 import { Strategy } from './strategy';
 
-export class RandomTaker extends Strategy {
+import PARAMS from '../params/taker.json';
+
+export class Taker extends Strategy {
 
   constructor(
-    configuration: Configuration,
-    oracle: Oracle,
-    positionManager: PositionManager,
+    connection: Connection,
+    account: Account,
+    positions: Position[],
+    markets: Market[],
   ) {
     super(
-      configuration,
-      oracle,
-      positionManager,
+      connection,
+      account,
+      positions,
+      markets,
     );
   }
 
-  async update(asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
+  async update(marketIndex: number, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
     let newOrders: OrderParams[] = [];
     let staleOrders: Order[] = [];
 

@@ -12,26 +12,10 @@ import { findOpenOrdersAccounts, getAssociatedTokenAddress, toPriceLevels } from
 
 async function monitor() {
 
-  const account = new Account(
-    JSON.parse(
-      fs.readFileSync(
-        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
-        'utf-8',
-      ),
-    ),
-  );
-
-  // @ts-ignore
-  const payer: Keypair = account;
-
-  const openOrdersAccount = new Account(
-    JSON.parse(
-      fs.readFileSync(
-        process.env.KEYPAIR || os.homedir() + '/.config/solana/open_orders.json',
-        'utf-8',
-      ),
-    ),
-  );
+  const accounts = [
+    new Account(JSON.parse(fs.readFileSync(os.homedir() + `/.config/solana/maker.json`, 'utf-8'))),
+    new Account(JSON.parse(fs.readFileSync(os.homedir() + `/.config/solana/taker.json`, 'utf-8'))),
+  ];
 
 
 
@@ -44,9 +28,6 @@ async function monitor() {
 
   assert(config.serumProgramId);
   const serumProgramId = new PublicKey(config.serumProgramId);
-
-  assert(mainnetConfig.serumProgramId);
-  const mainnetSerumProgramId = new PublicKey(mainnetConfig.serumProgramId);
 
   const connection = new Connection(config.url, 'processed' as Commitment);
   const mainnetConnection = new Connection(mainnetConfig.url, 'processed' as Commitment);
@@ -93,47 +74,41 @@ async function monitor() {
     //const openOrdersAccountInfo = await connection.getAccountInfo(openOrdersAccount.publicKey);
     //console.log(`  openOrdersAccountInfo = ${JSON.stringify(openOrdersAccountInfo)}`);
 
-    const openOrdersAccounts = await findOpenOrdersAccounts(
-      connection,
-      new PublicKey(market.market),
-      account.publicKey,
-      serumProgramId,
-      mainnetSerumProgramId,
-    );
+    for (const account of accounts) {
+      const openOrdersAccounts = await findOpenOrdersAccounts(
+        connection,
+        new PublicKey(market.market),
+        account.publicKey,
+        serumProgramId,
+      );
 
-    console.log(`  openOrdersAccounts = ${JSON.stringify(openOrdersAccounts)}`);
-
-    const openOrders = await OpenOrders.findForMarketAndOwner(
-      connection,
-      new PublicKey(market.market),
-      account.publicKey,
-      serumProgramId,
-    );
-
-    console.log(`  openOrdersAccountsForMarketAndOwner = ${JSON.stringify(openOrders.length)}`);
+      console.log(`  openOrdersAccounts = ${JSON.stringify(openOrdersAccounts)}`);
+    }
 
     console.log('');
   }
 
 
 
-  const balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
+  for (const account of accounts) {
+    const balance = await connection.getBalance(account.publicKey) / LAMPORTS_PER_SOL;
 
-  console.log(`Account: ${account.publicKey.toBase58()}`);
-  console.log(`  balance = ${JSON.stringify(balance)} SOL`);
+    console.log(`Account: ${account.publicKey.toBase58()}`);
+    console.log(`  balance = ${JSON.stringify(balance)} SOL`);
 
-  const tokens = Object.keys(config.tokens).map((key) => { return config.tokens[key]; });
+    const tokens = Object.keys(config.tokens).map((key) => { return config.tokens[key]; });
 
-  for (const token of tokens) {
-    const tokenAccount = await getAssociatedTokenAddress(new PublicKey(token.mint), payer.publicKey);
-    const accountInfo = await connection.getParsedAccountInfo(tokenAccount);
-    if (accountInfo.value) {
-      const tokenBalance = (await connection.getTokenAccountBalance(tokenAccount)).value.uiAmount;
-      console.log(`  ${token.symbol} tokens = ${tokenBalance}`);
+    for (const token of tokens) {
+      const tokenAccount = await getAssociatedTokenAddress(new PublicKey(token.mint), account.publicKey);
+      const accountInfo = await connection.getParsedAccountInfo(tokenAccount);
+      if (accountInfo.value) {
+        const tokenBalance = (await connection.getTokenAccountBalance(tokenAccount)).value.uiAmount;
+        console.log(`  ${token.symbol} tokens = ${tokenBalance}`);
+      }
     }
-  }
 
-  console.log('');
+    console.log('');
+  }
 
 }
 

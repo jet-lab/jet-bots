@@ -1,6 +1,6 @@
 import assert from 'assert';
 
-import { OrderManager } from './orderManager';
+import { Strategy } from './strategies/strategy';
 import { sleep } from './utils';
 
 export class Controller {
@@ -9,7 +9,7 @@ export class Controller {
   interval = 1000;
 
   constructor(
-    orderManager: OrderManager,
+    strategies: Strategy[],
   ) {
     process.on('SIGINT', async () => {
 
@@ -20,9 +20,10 @@ export class Controller {
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
-      await orderManager.cancelOpenOrders();
-
-      await orderManager.closeOpenOrdersAccounts();
+      for (const strategy of strategies) {
+        await strategy.cancelOpenOrders();
+        await strategy.closeOpenOrdersAccounts();
+      }
 
       console.log(`MARKET MAKER EXITED`);
 

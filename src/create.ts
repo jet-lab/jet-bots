@@ -16,18 +16,7 @@ function sleep(ms: number) { return new Promise( resolve => setTimeout(resolve, 
 
 async function create() {
 
-  const account = new Account(
-    JSON.parse(
-      fs.readFileSync(
-        process.env.KEYPAIR || os.homedir() + '/.config/solana/id.json',
-        'utf-8',
-      ),
-    ),
-  );
-
-  const payer = account;
-
-
+  const payer = Keypair.generate();
 
   const config = loadConfig('localnet');
 
@@ -51,7 +40,6 @@ async function create() {
     console.log(`  Balance = ${balance} SOL`);
     console.log('');
   }
-
 
 
 
