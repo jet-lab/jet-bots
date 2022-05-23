@@ -1,3 +1,4 @@
+import { BN } from "@project-serum/anchor";
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
 import { Account, Connection } from '@solana/web3.js';
@@ -27,48 +28,51 @@ export class Taker extends Strategy {
     let newOrders: OrderParams[] = [];
     let staleOrders: Order[] = [];
 
-    //TODO
+    const p = Math.random();
 
-    /*
-  public onAsk(book: SerumBook) {
-    const thresh = 0.75; // aggressiveness
-    const tbias = 0.0;
-    const rshift = 0.5 + tbias;
-    const rando = 2. * (Math.random() - rshift);
+    if (p < PARAMS.p) {
 
-    // hit the midpt
-    //if( rando > thresh) this.placeOrder('buy', +(book.basePrice), 1., 'ioc')
-  }
+      const priceLevels = bids.getL2(1);
 
-  public onBid(book: SerumBook) {
-    const thresh = 0.75; // aggressiveness
-    const tbias = 0.0;
-    const rshift = 0.5 + tbias;
-    const rando = 2. * (Math.random() - rshift);
+      if (priceLevels.length == 1) {
+        const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevels[0];
 
-    // hit the midpt
-    //if( rando > thresh) this.placeOrder('sell', +(book.basePrice), 1., 'ioc')
-  }
+        newOrders.push({
+          owner: this.account,
+          payer: this.positions[marketIndex].baseTokenAccount,
+          side: 'sell',
+          price,
+          size,
+          orderType: 'limit',
+          //clientId: undefined,
+          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+          feeDiscountPubkey: null,
+          selfTradeBehavior: 'abortTransaction',
+        });
+      }
 
-  public onPrice(book: SerumBook, token: PythToken, price: PythPrice) {
-    const thresh = 1 - 0.05;
-    const tbias = 0.0;
-    const rshift = 0.5 + tbias;
-    const rando = 2. * (Math.random() - rshift);
+    } else if (p > (1 - PARAMS.p)) {
 
-    if (rando > thresh || rando < -thresh) {
-      (async () => {
-        if (rando > thresh) {
-          const balance = await this.solanaClient.getBalance( this.wallet.publicKey);
-          if (balance > book.ask[0][0]*book.ask[0][1]) await this.placeOrder('buy', book.ask[0][0], book.ask[0][1], 'ioc');
-        } else if (rando < -thresh) {
-          const balance = await this.solanaClient.getBalance( this.wallet.publicKey );
-          if (this.position.currentPosition >= book.bid[0][1] || balance >= book.bid[0][0]*book.bid[0][1]) await this.placeOrder('sell', book.bid[0][0], book.bid[0][1], 'ioc');
-        }
-      })();
+      const priceLevels = asks.getL2(1);
+
+      if (priceLevels.length == 1) {
+        const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevels[0];
+
+        newOrders.push({
+          owner: this.account,
+          payer: this.positions[marketIndex].quoteTokenAccount,
+          side: 'buy',
+          price,
+          size,
+          orderType: 'limit',
+          //clientId: undefined,
+          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+          feeDiscountPubkey: null,
+          selfTradeBehavior: 'abortTransaction',
+        });
+      }
+
     }
-  }
-    */
 
     return [newOrders, staleOrders];
   }

@@ -1,8 +1,9 @@
 #!/usr/bin/env ts-node
 
-import { Market, Orderbook } from "@project-serum/serum";
+import { BN } from "@project-serum/anchor";
+import { Market, OpenOrders, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
-import { Commitment, Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { AccountInfo, Commitment, Connection, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import assert from 'assert';
 
 import { Configuration, loadConfig } from './configuration';
@@ -89,8 +90,8 @@ async function run() {
 
         for (let strategyIndex = 0; strategyIndex < strategies.length; strategyIndex++) {
 
-          const [ openOrders ]: [ Order[], void] = await Promise.all([
-            await markets[marketIndex].loadOrdersForOwner(connection, strategies[strategyIndex].account.publicKey),
+          const [ openOrdersAccountInfo ]: [ AccountInfo<Buffer> | null, void] = await Promise.all([
+            await connection.getAccountInfo(strategies[strategyIndex].positions[marketIndex].openOrdersAccount),
             await strategies[strategyIndex].positions[marketIndex].fetchBalances(),
           ]);
 
@@ -100,12 +101,20 @@ async function run() {
             console.log(`Quote token balance = ${JSON.stringify(strategies[strategyIndex].positions[marketIndex].quoteTokenBalance)}`);
           }
 
-          const [ newOrders, cancelOrders ]: [OrderParams[], Order[]] = await strategies[strategyIndex].update(marketIndex, asks, bids, openOrders);
+          if (openOrdersAccountInfo) {
+            const openOrders = OpenOrders.fromAccountInfo(
+              strategies[strategyIndex].positions[marketIndex].openOrdersAccount,
+              openOrdersAccountInfo,
+              markets[marketIndex].programId,
+            );
 
-          await strategies[strategyIndex].updateOrders(markets[marketIndex], newOrders, cancelOrders);
+            const [ newOrders, cancelOrders ]: [OrderParams[], Order[]] = await strategies[strategyIndex].update(marketIndex, asks, bids, openOrders.orders.filter((orderId) => { return !orderId.eq(new BN(0)); }));
 
-          if (strategies[strategyIndex].positions[marketIndex].baseTokenBalance != 0 || strategies[strategyIndex].positions[marketIndex].quoteTokenBalance != 0) {
-            await strategies[strategyIndex].positions[marketIndex].settleFunds();
+            await strategies[strategyIndex].updateOrders(markets[marketIndex], newOrders, cancelOrders);
+
+            if (openOrders.baseTokenFree > 0 || openOrders.quoteTokenFree > 0) {
+              await strategies[strategyIndex].positions[marketIndex].settleFunds();
+            }
           }
 
         }

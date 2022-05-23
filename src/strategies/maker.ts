@@ -2,7 +2,6 @@ import { BN } from "@project-serum/anchor";
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
 import { Account, Connection } from '@solana/web3.js';
-import assert from 'assert';
 
 import { Position } from '../position';
 import { Strategy } from './strategy';
@@ -83,6 +82,7 @@ export class Maker extends Strategy {
     } else {
       mainnetAskPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+        /*
         const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
         if (!order) {
           newOrders.push({
@@ -98,8 +98,10 @@ export class Maker extends Strategy {
             selfTradeBehavior: 'abortTransaction',
           });
         }
+        */
       });
 
+      /*
       openOrders.forEach((order) => {
         if (order.side == 'sell') {
           const priceLevel = mainnetAskPriceLevels.find((priceLevel) => {
@@ -111,9 +113,11 @@ export class Maker extends Strategy {
           }
         }
       });
+      */
 
       mainnetBidPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+        /*
         const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
         if (!order) {
           newOrders.push({
@@ -129,8 +133,10 @@ export class Maker extends Strategy {
             selfTradeBehavior: 'abortTransaction',
           });
         }
+        */
       });
 
+      /*
       openOrders.forEach((order) => {
         if (order.side == 'buy') {
           const priceLevel = mainnetBidPriceLevels.find((priceLevel) => {
@@ -142,6 +148,7 @@ export class Maker extends Strategy {
           }
         }
       });
+      */
     }
 
     return [newOrders, staleOrders];

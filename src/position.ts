@@ -37,48 +37,6 @@ export class Position {
     this.openOrdersAccount = openOrdersAccount;
   }
 
-  static async getOrCreateOpenOrdersAccount(
-    connection: Connection,
-    marketAddress: PublicKey,
-    owner: Account,
-    serumProgramId: PublicKey,
-  ): Promise<PublicKey> {
-
-    const openOrdersAccounts = await findOpenOrdersAccounts(
-      connection,
-      marketAddress,
-      owner.publicKey,
-      serumProgramId,
-    );
-
-    if (openOrdersAccounts.length > 0) {
-      return openOrdersAccounts[0];
-    }
-
-    const openOrdersAccount = new Account();
-
-    let transaction = new Transaction().add(
-      await OpenOrders.makeCreateAccountTransaction(
-        connection,
-        marketAddress,
-        owner.publicKey,
-        openOrdersAccount.publicKey,
-        serumProgramId,
-      ),
-      DexInstructions.initOpenOrders({
-        market: marketAddress,
-        openOrders: openOrdersAccount.publicKey,
-        owner: owner.publicKey,
-        programId: serumProgramId,
-        marketAuthority: undefined,
-      }),
-    );
-
-    await sendAndConfirmTransaction(connection, transaction, [owner, openOrdersAccount], { commitment: 'confirmed' });
-
-    return openOrdersAccount.publicKey;
-  }
-
   async init(): Promise<void>
   {
     let openOrdersAccountInfo = await this.connection.getAccountInfo(this.openOrdersAccount);
@@ -160,6 +118,48 @@ export class Position {
 
   async getBalance(publicKey: PublicKey) {
     return await this.connection.getBalance(publicKey, 'processed');
+  }
+
+  static async getOrCreateOpenOrdersAccount(
+    connection: Connection,
+    marketAddress: PublicKey,
+    owner: Account,
+    serumProgramId: PublicKey,
+  ): Promise<PublicKey> {
+
+    const openOrdersAccounts = await findOpenOrdersAccounts(
+      connection,
+      marketAddress,
+      owner.publicKey,
+      serumProgramId,
+    );
+
+    if (openOrdersAccounts.length > 0) {
+      return openOrdersAccounts[0];
+    }
+
+    const openOrdersAccount = new Account();
+
+    let transaction = new Transaction().add(
+      await OpenOrders.makeCreateAccountTransaction(
+        connection,
+        marketAddress,
+        owner.publicKey,
+        openOrdersAccount.publicKey,
+        serumProgramId,
+      ),
+      DexInstructions.initOpenOrders({
+        market: marketAddress,
+        openOrders: openOrdersAccount.publicKey,
+        owner: owner.publicKey,
+        programId: serumProgramId,
+        marketAuthority: undefined,
+      }),
+    );
+
+    await sendAndConfirmTransaction(connection, transaction, [owner, openOrdersAccount], { commitment: 'confirmed' });
+
+    return openOrdersAccount.publicKey;
   }
 
   async getTokenBalance(tokenAddress: PublicKey) {
