@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This market maker bot can be used for testing on localnet or devnet. It is not recommended to use this as-is for trading on mainnet; this is a very basic implementation and you will likely lose money. It can however be used as the basis to build your own profitable trading strategy.
+This market maker bot can be used for testing on devnet or localnet. It is not recommended to use this as-is for trading on mainnet; this is a very basic implementation and you will likely lose money. It can however be used as the basis to build your own profitable trading strategy.
 
 
 ## Setup
@@ -14,40 +14,56 @@ yarn install
 ```
 
 
-## Running on Localnet
+## Running on Devnet
 
-To test on localnet you can run a local validator with the Serum DEX and SPL token faucet programs loaded.
+To run the trading bot(s) you will need to create some test accounts. In the scripts directory run create_test_accounts.sh
 
 ```shell
 cd scripts
-./run_local_validator.sh
+./create_test_accounts.sh
 ```
 
-The option --bpf-program allows you to preload programs into your local validator state saving the time and effort needs to deploy the programs. To clear out the validators state, simply kill and rerun the script. The option --reset will reset the validator state. This allows you to start with a clean set of markets to test with.
-
-Once your validator is running you need to create an account and an open order account to test with. You can run create_test_accounts.sh to do this.
-
-Next, you will need to create some tokens to trade and some markets to trade them on. With your validator running go into the src directory and run create.ts.
+This will create two new file system wallets; one for a market maker and one for a taker. You can run either bot or both of them.
+There are three scripts for running the bots, from another command line run one of the following:
 
 ```shell
-cd src
-./create.ts
+./run_maker.sh
 ```
 
-This will create the sample tokens and markets described in config.json. This file was generated to create test markets for localnet, and devnet. The mainnet section is the currently actively traded addresses on mainnet.
-
-Once you have created the test markets you will need some tokens to trade. On localnet and devnet the script faucet.ts will airdrop you some samples tokens. From the src directory...
+This will create a market maker which will post orders to the order books listed in config.json. The orders are meant to replicate the corresponding order book currently on mainnet.
 
 ```shell
-./faucet.ts
+./run_taker.sh
 ```
 
-This script will fund you test account with SOL and SPL tokens to trade.
+This will randomly take from the top of the book.
+
+```shell
+./run_maker_taker.sh
+```
+
+Finally, you can run both the maker and the taker and have them trade with one another.
+
+After running the bot(s), press CTRL+C to exit. The bot will then cancel any orders it has in the book. This may take a minute or two to complete.
+
+
+## Monitoring
 
 While running the market making bot it is often useful to be able to inspect the value of the Solana accounts being used. To print out the relevant details you can run the monitor script in the src directory.
 
 ```shell
+cd src
 ./monitor.ts
+```
+
+
+## Cranking
+
+If you have orders that are matched a crank will help settle your trade. You can try running the crank yourself by running crank.ts.
+
+```shell
+cd src
+./crank.ts
 ```
 
 
