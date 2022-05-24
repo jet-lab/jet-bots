@@ -62,8 +62,6 @@ async function run() {
     strategies.push(await createStrategy(type, connection, marketConfigs, markets, mainnetConnection, mainnetMarkets));
   }
 
-  console.log(`MAKING MARKETS`);
-
   if (configuration.cancelOpenOrders) {
     for (const strategy of strategies) {
       await strategy.cancelOpenOrders();
@@ -71,6 +69,8 @@ async function run() {
   }
 
   const controller = new Controller(strategies);
+
+  console.log(`MAKING MARKETS`);
 
   while (controller.isRunning) {
     try {
