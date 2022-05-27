@@ -1,7 +1,7 @@
 import { BN } from "@project-serum/anchor";
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
-import { Account, Connection } from '@solana/web3.js';
+import { Account, Connection, PublicKey } from '@solana/web3.js';
 
 import { Position } from '../position';
 import { Strategy } from './strategy';
@@ -13,12 +13,14 @@ export class Taker extends Strategy {
   constructor(
     connection: Connection,
     account: Account,
+    feeDiscountPubkey: PublicKey | null,
     positions: Position[],
     markets: Market[],
   ) {
     super(
       connection,
       account,
+      feeDiscountPubkey,
       positions,
       markets,
     );
@@ -36,7 +38,6 @@ export class Taker extends Strategy {
 
       if (priceLevels.length == 1) {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevels[0];
-
         newOrders.push({
           owner: this.account,
           payer: this.positions[marketIndex].baseTokenAccount,
@@ -46,7 +47,7 @@ export class Taker extends Strategy {
           orderType: 'limit',
           //clientId: undefined,
           openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
-          feeDiscountPubkey: null,
+          feeDiscountPubkey: this.feeDiscountPubkey,
           selfTradeBehavior: 'abortTransaction',
         });
       }
@@ -57,7 +58,6 @@ export class Taker extends Strategy {
 
       if (priceLevels.length == 1) {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevels[0];
-
         newOrders.push({
           owner: this.account,
           payer: this.positions[marketIndex].quoteTokenAccount,
@@ -67,7 +67,7 @@ export class Taker extends Strategy {
           orderType: 'limit',
           //clientId: undefined,
           openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
-          feeDiscountPubkey: null,
+          feeDiscountPubkey: this.feeDiscountPubkey,
           selfTradeBehavior: 'abortTransaction',
         });
       }

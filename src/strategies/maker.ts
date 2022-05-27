@@ -1,7 +1,7 @@
 import { BN } from "@project-serum/anchor";
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
-import { Account, Connection } from '@solana/web3.js';
+import { Account, Connection, PublicKey } from '@solana/web3.js';
 
 import { Position } from '../position';
 import { Strategy } from './strategy';
@@ -16,6 +16,7 @@ export class Maker extends Strategy {
   constructor(
     connection: Connection,
     account: Account,
+    feeDiscountPubkey: PublicKey | null,
     positions: Position[],
     markets: Market[],
     mainnetConnection: Connection,
@@ -24,6 +25,7 @@ export class Maker extends Strategy {
     super(
       connection,
       account,
+      feeDiscountPubkey,
       positions,
       markets,
     );
@@ -80,10 +82,16 @@ export class Maker extends Strategy {
       });
 
     } else {
+
       mainnetAskPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
-        /*
-        const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
+        let order;
+        for (const item of asks.items()) {
+          if (item.priceLots.eq(priceLots)) {
+            order = item;
+            break;
+          }
+        }
         if (!order) {
           newOrders.push({
             owner: this.account,
@@ -98,10 +106,8 @@ export class Maker extends Strategy {
             selfTradeBehavior: 'abortTransaction',
           });
         }
-        */
       });
 
-      /*
       openOrders.forEach((order) => {
         if (order.side == 'sell') {
           const priceLevel = mainnetAskPriceLevels.find((priceLevel) => {
@@ -113,12 +119,16 @@ export class Maker extends Strategy {
           }
         }
       });
-      */
 
       mainnetBidPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
-        /*
-        const order = openOrders.find((order) => { return order.priceLots.eq(priceLots); });
+        let order;
+        for (const item of bids.items()) {
+          if (item.priceLots.eq(priceLots)) {
+            order = item;
+            break;
+          }
+        }
         if (!order) {
           newOrders.push({
             owner: this.account,
@@ -133,10 +143,8 @@ export class Maker extends Strategy {
             selfTradeBehavior: 'abortTransaction',
           });
         }
-        */
       });
 
-      /*
       openOrders.forEach((order) => {
         if (order.side == 'buy') {
           const priceLevel = mainnetBidPriceLevels.find((priceLevel) => {
@@ -148,7 +156,7 @@ export class Maker extends Strategy {
           }
         }
       });
-      */
+
     }
 
     return [newOrders, staleOrders];

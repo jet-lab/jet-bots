@@ -59,7 +59,7 @@ async function run() {
 
   const strategies: Strategy[] = [];
   for (const type of configuration.strategies) {
-    strategies.push(await createStrategy(type, connection, marketConfigs, markets, mainnetConnection, mainnetMarkets));
+    strategies.push(await createStrategy(type, connection, configuration.config, marketConfigs, markets, mainnetConnection, mainnetMarkets));
   }
 
   if (configuration.cancelOpenOrders) {

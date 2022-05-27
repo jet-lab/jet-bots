@@ -137,6 +137,16 @@ const getMintPubkeyFromTokenAccountPubkey = async (
   }
 };
 
+export function getSplTokenBalanceFromAccountInfo(
+  accountInfo: AccountInfo<Buffer>,
+  decimals: number,
+): number {
+  return divideBnToNumber(
+    new BN(accountInfo.data.slice(64, 72), 10, 'le'),
+    new BN(10).pow(new BN(decimals)),
+  );
+}
+
 export async function getVaultOwnerAndNonce(publicKey: PublicKey, programId: PublicKey) {
   const nonce = new BN(0);
   while (nonce.toNumber() < 255) {

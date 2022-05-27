@@ -31,7 +31,6 @@ async function fundAccounts(
 
   await fundAccount('maker', connection, baseToken, baseAmount, quoteToken, quoteAmount, splTokenFaucet);
   await fundAccount('taker', connection, baseToken, baseAmount, quoteToken, quoteAmount, splTokenFaucet);
-
 }
 
 async function fundAccount(
@@ -106,8 +105,49 @@ async function fundAccount(
 
 }
 
+async function fundFeeDiscountAccount(
+  name: string,
+  connection: Connection,
+  feeDiscountToken: any,
+  feeDiscountAmount: number,
+  splTokenFaucet: PublicKey,
+) {
+
+  console.log(`fundFeeDiscountAccount("${name}")`);
+
+  const account = new Account(JSON.parse(fs.readFileSync(os.homedir() + `/.config/solana/${name}.json`, 'utf-8')));
+
+  // @ts-ignore
+  const payer: Keypair = account;
+
+  const feeDiscountTokenAccount = await getAssociatedTokenAddress(new PublicKey(feeDiscountToken.mint), payer.publicKey);
+
+  if ((await connection.getParsedAccountInfo(feeDiscountTokenAccount)).value == null) {
+    let transaction = new Transaction();
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        payer.publicKey,
+        feeDiscountTokenAccount,
+        payer.publicKey,
+        new PublicKey(feeDiscountToken.mint),
+      )
+    );
+    await sendAndConfirmTransaction(connection, transaction, [payer], { commitment: 'confirmed' });
+  }
+
+  await airdropTokens(connection, splTokenFaucet, payer, new PublicKey(feeDiscountToken.faucet), feeDiscountTokenAccount, new BN(feeDiscountAmount).mul(new BN(10 ** feeDiscountToken.decimals)));
+
+  const feeDiscountBalance = (await connection.getTokenAccountBalance(feeDiscountTokenAccount)).value.uiAmount;
+
+  console.log(`Account: ${account.publicKey.toBase58()}`);
+  console.log(`  feeDiscountBalance = ${feeDiscountBalance} ${feeDiscountToken.symbol}`);
+  console.log('');
+
+}
+
 async function faucet() {
 
+  //const config = loadConfig('localnet');
   const config = loadConfig('devnet');
   const mainnetConfig = loadConfig('mainnet');
 
@@ -123,6 +163,9 @@ async function faucet() {
   await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.BTC_USD, config.tokens.BTC, config.tokens.USDC, quoteAmount, splTokenFaucet);
   await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.ETH_USD, config.tokens.ETH, config.tokens.USDC, quoteAmount, splTokenFaucet);
   await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.SOL_USD, config.tokens.SOL, config.tokens.USDC, quoteAmount, splTokenFaucet);
+
+  await fundFeeDiscountAccount('taker', connection, config.tokens.MSRM, 1, splTokenFaucet);
+  await fundFeeDiscountAccount('taker', connection, config.tokens.SRM, 100, splTokenFaucet);
 
 }
 

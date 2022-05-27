@@ -91,7 +91,7 @@ export class Position {
             quoteWallet,
             vaultSigner,
             programId: this.market.programId,
-            //TODO referrerQuoteWallet,
+            referrerQuoteWallet: this.quoteTokenAccount,
           })
         );
       }
@@ -189,7 +189,7 @@ export class Position {
         quoteWallet: this.quoteTokenAccount,
         vaultSigner,
         programId: this.market.programId,
-        //TODO referrerQuoteWallet,
+        referrerQuoteWallet: this.quoteTokenAccount,
       }),
       DexInstructions.closeOpenOrders({
         market: this.market.address,
