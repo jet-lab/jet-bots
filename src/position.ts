@@ -106,7 +106,7 @@ export class Position {
         })
       );
 
-      await this.connection.sendTransaction(transaction, [this.account]);
+      await sendAndConfirmTransaction(this.connection, transaction, [this.account]);
     }
   }
 
@@ -190,16 +190,9 @@ export class Position {
         vaultSigner,
         programId: this.market.programId,
         referrerQuoteWallet: this.quoteTokenAccount,
-      }),
-      DexInstructions.closeOpenOrders({
-        market: this.market.address,
-        openOrders: this.openOrdersAccount,
-        owner: this.account.publicKey,
-        solWallet: this.account.publicKey,
-        programId: this.market.programId,
       })
     );
-    await this.connection.sendTransaction(transaction, [this.account]);
+    await sendAndConfirmTransaction(this.connection, transaction, [this.account]);
   }
 
 };

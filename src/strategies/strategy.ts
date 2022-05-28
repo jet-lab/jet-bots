@@ -1,7 +1,7 @@
 import { BN } from "@project-serum/anchor";
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
-import { Account, Connection, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { Account, Connection, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction } from '@solana/web3.js';
 import assert from 'assert';
 
 import { Position } from '../position';
@@ -98,7 +98,7 @@ export abstract class Strategy {
       maxTs,
       replaceIfExists,
     });
-    return await connection.sendTransaction(transaction, [
+    return await sendAndConfirmTransaction(connection, transaction, [
       owner,
       ...signers,
     ]);

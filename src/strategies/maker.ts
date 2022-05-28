@@ -87,7 +87,7 @@ export class Maker extends Strategy {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
         let order;
         for (const item of asks.items()) {
-          if (item.priceLots.eq(priceLots)) {
+          if (item.price == price) {
             order = item;
             break;
           }
@@ -124,7 +124,7 @@ export class Maker extends Strategy {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
         let order;
         for (const item of bids.items()) {
-          if (item.priceLots.eq(priceLots)) {
+          if (item.price == price) {
             order = item;
             break;
           }

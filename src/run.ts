@@ -112,7 +112,7 @@ async function run() {
 
             await strategies[strategyIndex].updateOrders(markets[marketIndex], newOrders, cancelOrders);
 
-            if (openOrders.baseTokenFree > 0 || openOrders.quoteTokenFree > 0) {
+            if (openOrders.baseTokenFree.gt(new BN(0)) || openOrders.quoteTokenFree.gt(new BN(0))) {
               await strategies[strategyIndex].positions[marketIndex].settleFunds();
             }
           }
