@@ -2,6 +2,7 @@ import { BN } from "@project-serum/anchor";
 import { Market, Orderbook } from "@project-serum/serum";
 import { Order, OrderParams } from "@project-serum/serum/lib/market";
 import { Account, Connection, PublicKey } from '@solana/web3.js';
+import assert from "assert";
 
 import { Position } from '../position';
 import { Strategy } from './strategy';
@@ -14,8 +15,8 @@ export class Taker extends Strategy {
     connection: Connection,
     account: Account,
     feeDiscountPubkey: PublicKey | null,
-    positions: Position[],
-    markets: Market[],
+    positions: Record<string, Position>,
+    markets: Record<string, Market>,
   ) {
     super(
       connection,
@@ -26,9 +27,11 @@ export class Taker extends Strategy {
     );
   }
 
-  async update(marketIndex: number, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
+  async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
     let newOrders: OrderParams[] = [];
     let staleOrders: Order[] = [];
+
+    assert(this.positions[symbol]);
 
     const p = Math.random();
 
@@ -40,13 +43,13 @@ export class Taker extends Strategy {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevels[0];
         newOrders.push({
           owner: this.account,
-          payer: this.positions[marketIndex].baseTokenAccount,
+          payer: this.positions[symbol].baseTokenAccount,
           side: 'sell',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+          openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
           feeDiscountPubkey: this.feeDiscountPubkey,
           selfTradeBehavior: 'abortTransaction',
         });
@@ -60,13 +63,13 @@ export class Taker extends Strategy {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevels[0];
         newOrders.push({
           owner: this.account,
-          payer: this.positions[marketIndex].quoteTokenAccount,
+          payer: this.positions[symbol].quoteTokenAccount,
           side: 'buy',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+          openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
           feeDiscountPubkey: this.feeDiscountPubkey,
           selfTradeBehavior: 'abortTransaction',
         });

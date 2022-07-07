@@ -1,5 +1,6 @@
 import { Market } from "@project-serum/serum";
 import { Account, Connection, PublicKey } from '@solana/web3.js';
+import assert from "assert";
 import * as fs from 'fs';
 import * as os from 'os';
 
@@ -14,16 +15,17 @@ export async function createStrategy(
   type: string,
   connection: Connection,
   config: any,
-  marketConfigs: any[],
-  markets: Market[],
-  mainnetConnection?: Connection,
-  mainnetMarkets?: Market[],
+  marketConfigs: Record<string, any>,
+  markets: Record<string, Market>,
+  mainnetConnection: Connection,
+  mainnetMarkets: Record<string, Market>,
 ): Promise<Strategy> {
 
   const account = new Account(JSON.parse(fs.readFileSync(os.homedir() + `/.config/solana/${type}.json`, 'utf-8')));
 
   let feeDiscountPubkey: PublicKey | null = null;
 
+  /*
   const msrmTokenAccounts = await connection.getTokenAccountsByOwner(account.publicKey, { mint: new PublicKey(config.tokens.MSRM.mint) });
   if (msrmTokenAccounts.value.length > 0) {
     feeDiscountPubkey = msrmTokenAccounts.value[0].pubkey;
@@ -40,18 +42,24 @@ export async function createStrategy(
       });
     }
   }
+  */
 
-  const positions: Position[] = [];
+  const positions: Record<string, Position> = {};
 
-  for (let i = 0; i < marketConfigs.length; i++) {
+  for (const marketConfig of Object.values<any>(marketConfigs)) {
+    const market = markets[marketConfig.symbol];
+    assert(market);
+
     const [ baseTokenAccount, quoteTokenAccount ] = await Promise.all([
-      await getAssociatedTokenAddress(new PublicKey(marketConfigs[i].baseMint), account.publicKey),
-      await getAssociatedTokenAddress(new PublicKey(marketConfigs[i].quoteMint), account.publicKey),
+      await getAssociatedTokenAddress(new PublicKey(marketConfig.baseMint), account.publicKey),
+      await getAssociatedTokenAddress(new PublicKey(marketConfig.quoteMint), account.publicKey),
     ]);
-    const openOrdersAccount = await Position.getOrCreateOpenOrdersAccount(connection, markets[i].address, account, markets[i].programId);
-    const position = new Position(marketConfigs[i], connection, account, baseTokenAccount, quoteTokenAccount, markets[i], openOrdersAccount);
+
+    const openOrdersAccount = await Position.getOrCreateOpenOrdersAccount(connection, market.address, account, market.programId);
+
+    const position = new Position(marketConfig, connection, account, baseTokenAccount, quoteTokenAccount, market, openOrdersAccount);
     await position.init();
-    positions.push(position);
+    positions[marketConfig.symbol] = position;
   }
 
   switch (type) {

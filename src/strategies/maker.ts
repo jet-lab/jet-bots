@@ -11,16 +11,16 @@ import PARAMS from '../params/maker.json';
 export class Maker extends Strategy {
 
   mainnetConnection: Connection;
-  mainnetMarkets: Market[];
+  mainnetMarkets: Record<string, Market>;
 
   constructor(
     connection: Connection,
     account: Account,
     feeDiscountPubkey: PublicKey | null,
-    positions: Position[],
-    markets: Market[],
+    positions: Record<string, Position>,
+    markets: Record<string, Market>,
     mainnetConnection: Connection,
-    mainnetMarkets: Market[],
+    mainnetMarkets: Record<string, Market>,
   ) {
     super(
       connection,
@@ -33,15 +33,15 @@ export class Maker extends Strategy {
     this.mainnetMarkets = mainnetMarkets;
   }
 
-  async update(marketIndex: number, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
+  async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
     let newOrders: OrderParams[] = [];
     let staleOrders: Order[] = [];
 
     const depth = PARAMS.depth;
 
     const [ mainnetAsk, mainnetBid ] = await Promise.all([
-      await this.mainnetMarkets[marketIndex].loadAsks(this.mainnetConnection),
-      await this.mainnetMarkets[marketIndex].loadBids(this.mainnetConnection),
+      await this.mainnetMarkets[symbol].loadAsks(this.mainnetConnection),
+      await this.mainnetMarkets[symbol].loadBids(this.mainnetConnection),
     ]);
 
     const mainnetAskPriceLevels = mainnetAsk.getL2(depth);
@@ -51,15 +51,16 @@ export class Maker extends Strategy {
 
       mainnetAskPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+        console.log(`ASK ${price} ${size}`);
         newOrders.push({
           owner: this.account,
-          payer: this.positions[marketIndex].baseTokenAccount,
+          payer: this.positions[symbol].baseTokenAccount,
           side: 'sell',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+          openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
           feeDiscountPubkey: null,
           selfTradeBehavior: 'abortTransaction',
         });
@@ -67,15 +68,16 @@ export class Maker extends Strategy {
 
       mainnetBidPriceLevels.forEach((priceLevel) => {
         const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+        console.log(`BID ${price} ${size}`);
         newOrders.push({
           owner: this.account,
-          payer: this.positions[marketIndex].quoteTokenAccount,
+          payer: this.positions[symbol].quoteTokenAccount,
           side: 'buy',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+          openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
           feeDiscountPubkey: null,
           selfTradeBehavior: 'abortTransaction',
         });
@@ -95,13 +97,13 @@ export class Maker extends Strategy {
         if (!order) {
           newOrders.push({
             owner: this.account,
-            payer: this.positions[marketIndex].baseTokenAccount,
+            payer: this.positions[symbol].baseTokenAccount,
             side: 'sell',
             price,
             size,
             orderType: 'limit',
             //clientId: undefined,
-            openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+            openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
             feeDiscountPubkey: null,
             selfTradeBehavior: 'abortTransaction',
           });
@@ -132,13 +134,13 @@ export class Maker extends Strategy {
         if (!order) {
           newOrders.push({
             owner: this.account,
-            payer: this.positions[marketIndex].quoteTokenAccount,
+            payer: this.positions[symbol].quoteTokenAccount,
             side: 'buy',
             price,
             size,
             orderType: 'limit',
             //clientId: undefined,
-            openOrdersAddressKey: this.positions[marketIndex].openOrdersAccount,
+            openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
             feeDiscountPubkey: null,
             selfTradeBehavior: 'abortTransaction',
           });

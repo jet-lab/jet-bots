@@ -45,7 +45,7 @@ export class Position {
 
   async closeOpenOrdersAccounts()
   {
-    console.log(`closeOpenOrdersAccounts`);
+    console.log(`closeOpenOrdersAccounts ${this.account.publicKey}`);
 
     const openOrdersAccounts = await findOpenOrdersAccounts(
       this.connection,
@@ -68,6 +68,7 @@ export class Position {
 
     for (const openOrdersAccount of openOrdersAccounts) {
 
+      //console.log(`openOrdersAccount = ${openOrdersAccount}`);
       const accountInfo = await this.connection.getAccountInfo(openOrdersAccount);
       if (!accountInfo) continue;
       const openOrders = OpenOrders.fromAccountInfo(openOrdersAccount, accountInfo, this.market.programId);
@@ -77,9 +78,7 @@ export class Position {
 
       let transaction = new Transaction();
 
-      await this.fetchBalances();
-
-      if (this.baseTokenBalance != 0 || this.quoteTokenBalance != 0) {
+      if (openOrders.baseTokenFree > 0 || openOrders.quoteTokenFree > 0) {
         transaction.add(
           DexInstructions.settleFunds({
             market: this.market.address,

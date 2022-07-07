@@ -6,7 +6,6 @@ import CONFIG from './config.json';
 
 export class Configuration {
 
-  cancelOpenOrders: boolean;
   oracle?: string;
   verbose: boolean;
 
@@ -18,14 +17,12 @@ export class Configuration {
 
   constructor() {
     const argv: any = yargs(process.argv.slice(2)).options({
-      c: { alias: 'cancel all open orders', default: true, type: 'boolean' },
       o: { alias: 'oracle', required: false, type: 'string' },
       s: { alias: 'strategies', required: true, type: 'string' },
       u: { alias: 'url', required: true, type: 'string' },
       v: { alias: 'verbose', default: false, type: 'boolean' },
     }).argv;
 
-    this.cancelOpenOrders = argv.c;
     if (argv.o) this.oracle = argv.o;
     this.strategies = argv.s.split(',');
     this.config = loadConfig(argv.u);

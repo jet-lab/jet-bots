@@ -88,10 +88,12 @@ async function fundAccount(
     await sendAndConfirmTransaction(connection, transaction, [payer], { commitment: 'confirmed' });
   }
 
-  await Promise.all([
-    await airdropTokens(connection, splTokenFaucet, payer, new PublicKey(baseToken.faucet), baseTokenAccount, new BN(baseAmount).mul(new BN(10 ** baseToken.decimals))),
-    await airdropTokens(connection, splTokenFaucet, payer, new PublicKey(quoteToken.faucet), quoteTokenAccount, new BN(quoteAmount).mul(new BN(10 ** quoteToken.decimals))),
-  ]);
+  if (baseToken.faucet && quoteToken.faucet) {
+    await Promise.all([
+      await airdropTokens(connection, splTokenFaucet, payer, new PublicKey(baseToken.faucet), baseTokenAccount, new BN(baseAmount).mul(new BN(10 ** baseToken.decimals))),
+      await airdropTokens(connection, splTokenFaucet, payer, new PublicKey(quoteToken.faucet), quoteTokenAccount, new BN(quoteAmount).mul(new BN(10 ** quoteToken.decimals))),
+    ]);
+  }
 
   balance = await connection.getBalance(payer.publicKey) / LAMPORTS_PER_SOL;
   const baseBalance = (await connection.getTokenAccountBalance(baseTokenAccount)).value.uiAmount;
@@ -162,7 +164,7 @@ async function faucet() {
 
   await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.BTC_USD, config.tokens.BTC, config.tokens.USDC, quoteAmount, splTokenFaucet);
   await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.ETH_USD, config.tokens.ETH, config.tokens.USDC, quoteAmount, splTokenFaucet);
-  await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.SOL_USD, config.tokens.SOL, config.tokens.USDC, quoteAmount, splTokenFaucet);
+  //await fundAccounts(connection, mainnetConnection, mainnetConfig.oracles.SOL_USD, config.tokens.SOL, config.tokens.USDC, quoteAmount, splTokenFaucet);
 
   await fundFeeDiscountAccount('taker', connection, config.tokens.MSRM, 1, splTokenFaucet);
   await fundFeeDiscountAccount('taker', connection, config.tokens.SRM, 100, splTokenFaucet);

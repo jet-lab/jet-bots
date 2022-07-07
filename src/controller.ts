@@ -6,7 +6,7 @@ import { sleep } from './utils';
 export class Controller {
 
   isRunning = true;
-  interval = 1000;
+  interval = 4000;
 
   constructor(
     strategies: Strategy[],

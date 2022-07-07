@@ -16,11 +16,11 @@ yarn install
 
 ## Running on Devnet
 
-To run the trading bot(s) you will need to create some test accounts. In the scripts directory run create_test_accounts.sh
+To run the trading bot(s) you will need to create some test accounts. In the scripts directory run create_devnet_test_accounts.sh
 
 ```shell
 cd scripts
-./create_test_accounts.sh
+./create_devnet_test_accounts.sh
 ```
 
 This will create two new file system wallets; one for a market maker and one for a taker. You can run either bot or both of them.
