@@ -1,4 +1,3 @@
-import { MarginSwap } from "@jet-lab/margin";
 import { BN } from "@project-serum/anchor";
 import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Commitment, Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
@@ -6,7 +5,7 @@ import assert from 'assert';
 
 import { airdropTokens } from "../solana/faucet";
 
-export class OrcaChecker {
+export class SwapChecker {
   commitment: Commitment = 'confirmed';
   configuration;
   connection: Connection;
@@ -45,7 +44,7 @@ export const CurveType = Object.freeze({
   Offset: 3, // Offset curve, like Uniswap, but with an additional offset on the token B side
 });
 
-export class OrcaInitializer {
+export class SwapInitializer {
   commitment: Commitment = 'confirmed';
   configuration;
   connection: Connection;
@@ -166,6 +165,8 @@ export class OrcaInitializer {
                 await airdropTokens(this.connection, this.payer, quoteFaucet, new PublicKey(swap.quoteVault), new BN(swap.quoteAmount * 10 ** quoteToken.decimals), new PublicKey(this.configuration.splTokenFaucet)),
               ]);
 
+              //TODO
+              /*
               MarginSwap.create(
                 this.connection,
                 // @ts-ignore
@@ -191,6 +192,7 @@ export class OrcaInitializer {
                 swap.hostFeeDenominator,
                 CurveType.ConstantProduct,
               );
+              */
             }
           }
         }

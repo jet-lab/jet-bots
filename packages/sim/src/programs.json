@@ -1,0 +1,25 @@
+{
+  "devnet": {
+    "orca_token_swap": "3xQ8SWv2GaFXXpHZNqkXsdxq5DZciHBz6ZFoPPfbFd7U",
+    "pyth": "FT9EZnpdo3tPfUCGn8SBkvN9DMpSStAg3YvAqvYrtSvL",
+    "serum_dex_v3": "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY",
+    "serum_referral_authority": "11111111111111111111111111111111",
+    "spl_token_faucet": "4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt",
+    "spl_token_swap": "SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8"
+  },
+  "localnet": {
+    "orca_token_swap": "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP",
+    "pyth": "FT9EZnpdo3tPfUCGn8SBkvN9DMpSStAg3YvAqvYrtSvL",
+    "serum_dex_v3": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+    "serum_referral_authority": "11111111111111111111111111111111",
+    "spl_token_faucet": "4bXpkKSV8swHSnwqtzuboGPaPDeEgAn4Vt8GfarV5rZt",
+    "spl_token_swap": "SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8"
+  },
+  "mainnet": {
+    "orca_token_swap": "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP",
+    "pyth": "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH",
+    "serum_dex_v3": "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin",
+    "serum_referral_authority": "11111111111111111111111111111111",
+    "spl_token_swap": "SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8"
+  }
+}

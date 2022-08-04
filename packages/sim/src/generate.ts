@@ -8,6 +8,6 @@ import ConfigurationBuilder from './configurationBuilder';
   const [ configuration_public, configuration_private ] = await configurationBuilder.build();
 
   fs.writeFileSync('./src/config.json', JSON.stringify(configuration_private, null, 2));
-  fs.writeFileSync('../jet-v2/libraries/ts/src/margin/config.json', JSON.stringify(configuration_public, null, 2));
+  fs.writeFileSync('../bot/src/config.json', JSON.stringify(configuration_public, null, 2));
 
 })();

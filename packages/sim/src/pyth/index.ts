@@ -6,65 +6,6 @@ import { Buffer } from "buffer";
 import { buildInstruction } from '../instructions';
 import { IDL, Pyth } from "./types";
 
-export class PythChecker {
-  commitment: Commitment = 'confirmed';
-  configuration;
-  connection: Connection;
-  pythClient: PythClient;
-
-  constructor(configuration) {
-    this.configuration = configuration;
-    this.connection = new Connection(configuration.url, this.commitment);
-    this.pythClient = new PythClient(configuration);
-  }
-
-  async check() {
-    let oracles: any[] = [];
-    for (const key in this.configuration.oracles) {
-      oracles.push(this.configuration.oracles[key]);
-    }
-
-    for (const oracle of oracles) {
-      console.log(`ORACLE: ${oracle.symbol}`);
-      console.log(`  address = ${oracle.address}`);
-
-      const pythPrice = await this.pythClient.getPythPrice(new PublicKey(oracle.address));
-      console.log(`  price = ${JSON.stringify(pythPrice.price)}`);
-      console.log(`  confidence = ${JSON.stringify(pythPrice.confidence)}`);
-
-      console.log('');
-    }
-  }
-
-}
-
-export class PythInitializer {
-  commitment: Commitment = 'confirmed';
-  configuration;
-  connection: Connection;
-  payer: Keypair;
-  pythClient: PythClient;
-
-  constructor(configuration, payer: Keypair) {
-    this.configuration = configuration;
-    this.connection = new Connection(configuration.url, this.commitment);
-    this.payer = payer;
-    this.pythClient = new PythClient(configuration);
-  }
-
-  async initialize(): Promise<void> {
-    let oracles: any[] = [];
-    for (const key in this.configuration.oracles) {
-      oracles.push(this.configuration.oracles[key]);
-    }
-
-    await Promise.all(oracles.map((oracle) => {
-      return this.pythClient.createPriceAccount(this.payer, Keypair.fromSecretKey(Buffer.from(oracle.productPrivateKey, 'base64')), Keypair.fromSecretKey(Buffer.from(oracle.privateKey, 'base64')), oracle.price, oracle.confidence, oracle.exponent);
-    }));
-  }
-
-}
-
 export class PythClient {
   buildInstruction
   commitment: Commitment = "confirmed"

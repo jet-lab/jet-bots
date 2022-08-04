@@ -1,16 +1,18 @@
-import assert from 'assert';
 import { BN } from "@project-serum/anchor";
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { Keypair, PublicKey } from '@solana/web3.js';
+import assert from 'assert';
 
 import { PythClient } from './pyth';
 
-import JET_POOLS from './jet/pools.json';
-import MARGIN_PROGRAMS from './margin/programs.json';
-import ORCA_SWAPS from './orca/swaps.json';
+//import LENDING_POOLS from './solend/production.json';
+const LENDING_POOLS: any[] = [];
+
+import PROGRAMS from './programs.json';
 import PYTH_ORACLES from './pyth/oracles.json';
 import SERUM_MARKETS from './serum/markets.json';
 import SOLANA_TOKENS from './solana/tokens.json';
+import TOKEN_SWAPS from './orca/swaps.json';
 
 export default class ConfigurationBuilder {
   instruments: any;
@@ -226,7 +228,7 @@ export default class ConfigurationBuilder {
         if (this.config.devnet.swaps && this.config.devnet.swaps[symbol.replace('/', '_')]) {
           return this.config.devnet.swaps[symbol.replace('/', '_')];
         } else {
-          const swapConfiguration = ORCA_SWAPS.find((swapConfiguration) => { return symbol === swapConfiguration.symbol; });
+          const swapConfiguration = TOKEN_SWAPS.find((swapConfiguration) => { return symbol === swapConfiguration.symbol; });
           if (swapConfiguration) {
             const baseToken = generatedTokenConfigurations.find((token) => { return swapConfiguration.baseSymbol === token.symbol; });
             assert(baseToken);
@@ -237,7 +239,7 @@ export default class ConfigurationBuilder {
             const poolTokenMintKeypair: Keypair = Keypair.generate();
 
             //TODO The program id can be different for each cluster, so we need to compute the PDA and set it as the authority. For not it's using the devnet programid.
-            const [authority, bumpSeed] = await PublicKey.findProgramAddress([swapKeypair.publicKey.toBuffer()], new PublicKey(MARGIN_PROGRAMS.devnet.orca_token_swap));
+            const [authority, bumpSeed] = await PublicKey.findProgramAddress([swapKeypair.publicKey.toBuffer()], new PublicKey(PROGRAMS.devnet.orca_token_swap));
 
             const baseVault = await getAssociatedTokenAddress(new PublicKey(baseToken.mint), authority, true);
             const quoteVault = await getAssociatedTokenAddress(new PublicKey(quoteToken.mint), authority, true);
@@ -293,14 +295,14 @@ export default class ConfigurationBuilder {
 
     return [
       {
-        "devnet": await this.buildPublic('devnet', MARGIN_PROGRAMS.devnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
-        "localnet": await this.buildPublic('localnet', MARGIN_PROGRAMS.localnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
-        "mainnet-beta": await this.buildPublic('mainnet', MARGIN_PROGRAMS.mainnet, SERUM_MARKETS, PYTH_ORACLES, JET_POOLS, ORCA_SWAPS, SOLANA_TOKENS),
+        "devnet": await this.buildPublic('devnet', PROGRAMS.devnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
+        "localnet": await this.buildPublic('localnet', PROGRAMS.localnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
+        "mainnet-beta": await this.buildPublic('mainnet', PROGRAMS.mainnet, SERUM_MARKETS, PYTH_ORACLES, LENDING_POOLS, TOKEN_SWAPS, SOLANA_TOKENS),
       },
       {
-        "devnet": await this.buildPrivate('devnet', MARGIN_PROGRAMS.devnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
-        "localnet": await this.buildPrivate('localnet', MARGIN_PROGRAMS.localnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
-        "mainnet-beta": await this.buildPublic('mainnet', MARGIN_PROGRAMS.mainnet, SERUM_MARKETS, PYTH_ORACLES, JET_POOLS, ORCA_SWAPS, SOLANA_TOKENS),
+        "devnet": await this.buildPrivate('devnet', PROGRAMS.devnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
+        "localnet": await this.buildPrivate('localnet', PROGRAMS.localnet, generatedMarketConfigurations, generatedOracleConfigurations, generatedPoolConfigurations, generatedSwapConfigurations, generatedTokenConfigurations),
+        "mainnet-beta": await this.buildPublic('mainnet', PROGRAMS.mainnet, SERUM_MARKETS, PYTH_ORACLES, LENDING_POOLS, TOKEN_SWAPS, SOLANA_TOKENS),
       }
     ];
   }
