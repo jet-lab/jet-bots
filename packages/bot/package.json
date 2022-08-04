@@ -1,8 +1,8 @@
 {
-  "name": "market-maker-ts",
+  "name": "solana-trading-bot",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@github.com:jet-lab/market-maker-ts.git",
+  "repository": "git@github.com:jet-lab/solana-trading-bot.git",
   "author": "<mas@jetprotocol.io>",
   "license": "MIT",
   "scripts": {

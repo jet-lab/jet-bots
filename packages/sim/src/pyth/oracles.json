@@ -1,0 +1,93 @@
+[
+  {
+    "symbol": "ADA/USD",
+    "baseSymbol": "ADA",
+    "quoteSymbol": "USD",
+    "product":"6TZHVFzEmF1rCLAJv3gkTFk9QGniqsrSJmNnVm7mMRPK",
+    "address": "3pyn4svBbxJ9Wnn3RVeafyLWfzie6yC5eTig2S62v9SC"
+  },
+  {
+    "symbol": "BNB/USD",
+    "baseSymbol": "BNB",
+    "quoteSymbol": "USD",
+    "product":"4ANvG59u4YToJnVi2CkZbbfTE9mWHpyNbMmm69R43E3q",
+    "address": "4CkQJBxhU8EZ2UjhigbtdaPbpTe6mqf811fipYBFbSYN"
+  },
+  {
+    "symbol": "BTC/USD",
+    "baseSymbol": "BTC",
+    "quoteSymbol": "USD",
+    "product":"4aDoSXJ5o3AuvL7QFeR6h44jALQfTmUUCTVGDD6aoJTM",
+    "address": "GVXRSBjFk6e6J3NbVPXohDJetcTjaeeuykUpbQF8UoMU"
+  },
+  {
+    "symbol": "COPE/USD",
+    "baseSymbol": "COPE",
+    "quoteSymbol": "USD",
+    "product":"2nBBaJ2WozeqyDGaVXAqm3d5YqCjeDhoqpfTjyLNykxe",
+    "address": "9xYBiDWYsh2fHzpsz3aaCnNHCKWBNtfEDLtU6kS4aFD9"
+  },
+  {
+    "symbol": "ETH/USD",
+    "baseSymbol": "ETH",
+    "quoteSymbol": "USD",
+    "product":"EMkxjGC1CQ7JLiutDbfYb7UKb3zm9SJcUmr1YicBsdpZ",
+    "address": "JBu1AL4obBcCMqKBBxhpWCNUt136ijcuMZLFvTP7iWdB"
+  },
+  {
+    "symbol": "FTT/USD",
+    "baseSymbol": "FTT",
+    "quoteSymbol": "USD",
+    "product":"E7ymZgACaSd1fYLf2V7WkAmFkpRiWfAjm49R7bceny9K",
+    "address": "8JPJJkmDScpcNmBRKGZuPuG2GYAveQgP3t5gFuMymwvF"
+  },
+  {
+    "symbol": "MNGO/USD",
+    "baseSymbol": "MNGO",
+    "quoteSymbol": "USD",
+    "product":"Cgua36MoUVXAPhKXAUsd5LsfM2s4Bj9jsMASm5rs8JZy",
+    "address": "79wm3jjcPr6RaNQ4DGvP5KxG1mNd3gEBsg6FsNVFezK4"
+  },
+  {
+    "symbol": "MSOL/USD",
+    "baseSymbol": "MSOL",
+    "quoteSymbol": "USD",
+    "product":"BS2iAqT67j8hA9Jji4B8UpL3Nfw9kwPfU5s4qeaf1e7r",
+    "address": "E4v1BBgoso9s64TQvmyownAVJbhbEPGyzA3qn4n46qj9"
+  },
+  {
+    "symbol": "RAY/USD",
+    "baseSymbol": "RAY",
+    "quoteSymbol": "USD",
+    "product":"EjtaES3pbMCaNrVFtZ5sT36WPXAnARZxCFsoEr2hsUKJ",
+    "address": "AnLf8tVYCM816gmBjiy8n53eXKKEDydT5piYjjQDPgTB"
+  },
+  {
+    "symbol": "SOL/USD",
+    "baseSymbol": "SOL",
+    "quoteSymbol": "USD",
+    "product":"ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj",
+    "address": "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
+  },
+  {
+    "symbol": "SRM/USD",
+    "baseSymbol": "SRM",
+    "quoteSymbol": "USD",
+    "product":"6T1eJbKWyhZXEjmuBej9gPk3SRTagzrEQovCSwAWD57P",
+    "address": "3NBReDRTLKMQEKiLD5tGcx4kXbTf88b7f2xLS9UuGjym"
+  },
+  {
+    "symbol": "USDC/USD",
+    "baseSymbol": "USDC",
+    "quoteSymbol": "USD",
+    "product":"8GWTTbNiXdmyZREXbjsZBmCRuzdPrW55dnZGDkTRjWvb",
+    "address": "Gnt27xtC473ZT2Mw5u8wZ68Z3gULkSTb5DuxJy7eJotD"
+  },
+  {
+    "symbol": "USDT/USD",
+    "baseSymbol": "USDT",
+    "quoteSymbol": "USD",
+    "product":"Av6XyAMJnyi68FdsKSPYgzfXGjYrrt6jcAMwtvzLCqaM",
+    "address": "3vxLXJqLqF3JG5TCbYycbKWRBbCJQLxQmBGCkyqEEefL"
+  }
+]

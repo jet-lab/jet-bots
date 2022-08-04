@@ -1,0 +1,27 @@
+{
+  "markets": [
+    "BTC/USDC",
+    "ETH/USDC",
+    "SOL/USDC",
+    "SRM/USDC"
+  ],
+  "oracles": [
+    "BTC/USD",
+    "ETH/USD",
+    "SOL/USD",
+    "SRM/USD",
+    "USDC/USD"
+  ],
+  "swaps": [
+    "BTC/USDC",
+    "ETH/USDC"
+  ],
+  "tokens": [
+    "BTC",
+    "ETH",
+    "MSRM",
+    "SOL",
+    "SRM",
+    "USDC"
+  ]
+}
