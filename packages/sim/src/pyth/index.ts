@@ -15,7 +15,7 @@ export class PythClient {
   private pythProgramId: PublicKey
   private pythInstruction: InstructionNamespace<Pyth>
 
-  constructor(configuration) {
+  constructor(configuration: any) {
     this.configuration = configuration
     assert(configuration.url)
     this.connection = new Connection(configuration.url, this.commitment)

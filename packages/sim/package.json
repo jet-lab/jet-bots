@@ -1,9 +1,13 @@
 {
-  "name": "@solana-trading/sim",
+  "name": "@jet-trading/sim",
   "version": "1.0.0",
-  "repository": "git@github.com:jet-lab/solana-trading.git",
+  "repository": "git@github.com:jet-lab/jet-trading.git",
   "description": "Initializes a local simulation environment.",
   "scripts": {
+    "clean": "shx mkdir -p lib && shx rm -rf lib",
+    "package": "shx mkdir -p lib/cjs lib/esm && echo '{\"type\":\"commonjs\"}' | npx json > ./lib/cjs/package.json && echo '{\"type\":\"module\"} ' | npx json > ./lib/esm/package.json",
+    "prebuild": "pnpm run clean && pnpm run package",
+
     "generate": "ts-node src/generate.ts",
     "initialize": "ts-node src/initialize.ts"
   },
@@ -16,7 +20,6 @@
     "bs58": "^5.0.0"
   },
   "devDependencies": {
-    "@tsconfig/recommended": "^1.0.1",
     "@types/bn.js": "^5.1.0",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",
@@ -24,6 +27,7 @@
     "chai": "^4.3.4",
     "mocha": "^9.2.0",
     "rimraf": "^3.0.2",
+    "shx": "^0.3.4",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.4"
   }

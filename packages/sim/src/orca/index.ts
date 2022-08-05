@@ -10,7 +10,7 @@ export class SwapChecker {
   configuration;
   connection: Connection;
 
-  constructor(configuration) {
+  constructor(configuration: any) {
     this.configuration = configuration;
     this.connection = new Connection(configuration.url, this.commitment);
   }
