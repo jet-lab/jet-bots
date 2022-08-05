@@ -1,6 +1,6 @@
 # Jet Trading
 
-
+The jet-trading libraries can be used for testing on devnet or localnet. It is not recommended to use this as-is for trading on mainnet; this is a very basic implementation and you will likely lose money. It can however be used as the basis to build your own profitable trading strategy.
 
 ## Prerequisites
 
@@ -67,9 +67,6 @@ Change the string `'Hello, world!'` to some other string, and save the file. The
 
 
 
-## Purpose
-
-This market maker bot can be used for testing on devnet or localnet. It is not recommended to use this as-is for trading on mainnet; this is a very basic implementation and you will likely lose money. It can however be used as the basis to build your own profitable trading strategy.
 
 
 ## Setup
