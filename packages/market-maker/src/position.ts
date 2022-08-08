@@ -1,12 +1,17 @@
-import { BN } from "@project-serum/anchor";
-import { DexInstructions, Market, OpenOrders } from "@project-serum/serum";
-import { Account, Connection, PublicKey, sendAndConfirmTransaction, Transaction } from '@solana/web3.js';
+import { BN } from '@project-serum/anchor';
+import { DexInstructions, Market, OpenOrders } from '@project-serum/serum';
+import {
+  Account,
+  Connection,
+  PublicKey,
+  sendAndConfirmTransaction,
+  Transaction,
+} from '@solana/web3.js';
 import assert from 'assert';
 
 import { findOpenOrdersAccounts, getAssociatedTokenAddress } from './utils';
 
 export class Position {
-
   config: any;
   connection: Connection;
   account: Account;
@@ -37,14 +42,14 @@ export class Position {
     this.openOrdersAccount = openOrdersAccount;
   }
 
-  async init(): Promise<void>
-  {
-    let openOrdersAccountInfo = await this.connection.getAccountInfo(this.openOrdersAccount);
+  async init(): Promise<void> {
+    let openOrdersAccountInfo = await this.connection.getAccountInfo(
+      this.openOrdersAccount,
+    );
     assert(openOrdersAccountInfo);
   }
 
-  async closeOpenOrdersAccounts()
-  {
+  async closeOpenOrdersAccounts() {
     console.log(`closeOpenOrdersAccounts ${this.account.publicKey}`);
 
     const openOrdersAccounts = await findOpenOrdersAccounts(
@@ -54,8 +59,14 @@ export class Position {
       this.market.programId,
     );
 
-    const baseWallet = await getAssociatedTokenAddress(new PublicKey(this.market.baseMintAddress), this.account.publicKey);
-    const quoteWallet = await getAssociatedTokenAddress(new PublicKey(this.market.quoteMintAddress), this.account.publicKey);
+    const baseWallet = await getAssociatedTokenAddress(
+      new PublicKey(this.market.baseMintAddress),
+      this.account.publicKey,
+    );
+    const quoteWallet = await getAssociatedTokenAddress(
+      new PublicKey(this.market.quoteMintAddress),
+      this.account.publicKey,
+    );
 
     // @ts-ignore
     const vaultSigner = await PublicKey.createProgramAddress(
@@ -67,18 +78,28 @@ export class Position {
     );
 
     for (const openOrdersAccount of openOrdersAccounts) {
-
       //console.log(`openOrdersAccount = ${openOrdersAccount}`);
-      const accountInfo = await this.connection.getAccountInfo(openOrdersAccount);
+      const accountInfo = await this.connection.getAccountInfo(
+        openOrdersAccount,
+      );
       if (!accountInfo) continue;
-      const openOrders = OpenOrders.fromAccountInfo(openOrdersAccount, accountInfo, this.market.programId);
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount,
+        accountInfo,
+        this.market.programId,
+      );
       let hasOrders = false;
-      openOrders.orders.forEach((orderId) => { if (!orderId.eq(new BN(0))) hasOrders = true; });
+      openOrders.orders.forEach(orderId => {
+        if (!orderId.eq(new BN(0))) hasOrders = true;
+      });
       if (hasOrders) continue;
 
       let transaction = new Transaction();
 
-      if (openOrders.baseTokenFree > 0 || openOrders.quoteTokenFree > 0) {
+      if (
+        Number(openOrders.baseTokenFree) > 0 ||
+        Number(openOrders.quoteTokenFree) > 0
+      ) {
         transaction.add(
           DexInstructions.settleFunds({
             market: this.market.address,
@@ -91,7 +112,7 @@ export class Position {
             vaultSigner,
             programId: this.market.programId,
             referrerQuoteWallet: this.quoteTokenAccount,
-          })
+          }),
         );
       }
 
@@ -102,17 +123,23 @@ export class Position {
           owner: this.account.publicKey,
           solWallet: this.account.publicKey,
           programId: this.market.programId,
-        })
+        }),
       );
 
-      await sendAndConfirmTransaction(this.connection, transaction, [this.account]);
+      await sendAndConfirmTransaction(this.connection, transaction, [
+        this.account,
+      ]);
     }
   }
 
   async fetchBalances() {
     this.balance = await this.connection.getBalance(this.account.publicKey);
-    this.baseTokenBalance = (await this.getTokenBalance(this.baseTokenAccount))!;
-    this.quoteTokenBalance = (await this.getTokenBalance(this.quoteTokenAccount))!;
+    this.baseTokenBalance = (await this.getTokenBalance(
+      this.baseTokenAccount,
+    ))!;
+    this.quoteTokenBalance = (await this.getTokenBalance(
+      this.quoteTokenAccount,
+    ))!;
   }
 
   async getBalance(publicKey: PublicKey) {
@@ -125,7 +152,6 @@ export class Position {
     owner: Account,
     serumProgramId: PublicKey,
   ): Promise<PublicKey> {
-
     const openOrdersAccounts = await findOpenOrdersAccounts(
       connection,
       marketAddress,
@@ -156,18 +182,25 @@ export class Position {
       }),
     );
 
-    await sendAndConfirmTransaction(connection, transaction, [owner, openOrdersAccount], { commitment: 'confirmed' });
+    await sendAndConfirmTransaction(
+      connection,
+      transaction,
+      [owner, openOrdersAccount],
+      { commitment: 'confirmed' },
+    );
 
     return openOrdersAccount.publicKey;
   }
 
   async getTokenBalance(tokenAddress: PublicKey) {
-    const balance = await this.connection.getTokenAccountBalance(tokenAddress, 'processed');
+    const balance = await this.connection.getTokenAccountBalance(
+      tokenAddress,
+      'processed',
+    );
     return balance.value.uiAmount;
   }
 
-  async settleFunds()
-  {
+  async settleFunds() {
     // @ts-ignore
     const vaultSigner = await PublicKey.createProgramAddress(
       [
@@ -189,9 +222,10 @@ export class Position {
         vaultSigner,
         programId: this.market.programId,
         referrerQuoteWallet: this.quoteTokenAccount,
-      })
+      }),
     );
-    await sendAndConfirmTransaction(this.connection, transaction, [this.account]);
+    await sendAndConfirmTransaction(this.connection, transaction, [
+      this.account,
+    ]);
   }
-
-};
+}

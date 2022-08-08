@@ -1,13 +1,19 @@
-import { BN } from "@project-serum/anchor";
-import { Market, Orderbook } from "@project-serum/serum";
-import { Order, OrderParams } from "@project-serum/serum/lib/market";
-import { Account, Connection, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { BN } from '@project-serum/anchor';
+import { Market, Orderbook } from '@project-serum/serum';
+import { Order, OrderParams } from '@project-serum/serum/lib/market';
+import {
+  Account,
+  Connection,
+  PublicKey,
+  sendAndConfirmTransaction,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import assert from 'assert';
 
 import { Position } from '../position';
 
 export abstract class Strategy {
-
   connection: Connection;
   account: Account;
   feeDiscountPubkey: PublicKey | null;
@@ -28,27 +34,36 @@ export abstract class Strategy {
     this.markets = markets;
   }
 
-  async cancelOpenOrders()
-  {
+  async cancelOpenOrders() {
     for (const market of Object.values<Market>(this.markets)) {
-      const openOrders = await market.loadOrdersForOwner(this.connection, this.account.publicKey);
+      const openOrders = await market.loadOrdersForOwner(
+        this.connection,
+        this.account.publicKey,
+      );
       for (const openOrder of openOrders) {
         await market.cancelOrder(this.connection, this.account, openOrder);
       }
     }
   }
 
-  async closeOpenOrdersAccounts()
-  {
+  async closeOpenOrdersAccounts() {
     for (const position of Object.values<Position>(this.positions)) {
       await position.closeOpenOrdersAccounts();
     }
   }
 
-  abstract update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]>;
+  //abstract update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]>;
+  abstract update(
+    symbol: string,
+    asks: Orderbook,
+    bids: Orderbook,
+  ): Promise<[OrderParams[], Order[]]>;
 
-  async updateOrders(market: Market, newOrders: OrderParams[], cancelOrders: Order[])
-  {
+  async updateOrders(
+    market: Market,
+    newOrders: OrderParams[],
+    cancelOrders: Order[],
+  ) {
     if (cancelOrders.length > 0) {
       for (const order of cancelOrders) {
         await market.cancelOrder(this.connection, this.account, order);
@@ -82,26 +97,27 @@ export abstract class Strategy {
   ) {
     assert(openOrdersAddressKey);
 
-    const { transaction, signers } = await this.makePlaceOrderTransaction<
-      Account
-    >(market, {
-      owner,
-      payer,
-      side,
-      price,
-      size,
-      orderType,
-      clientId,
-      openOrdersAddressKey,
-      openOrdersAccount,
-      feeDiscountPubkey,
-      maxTs,
-      replaceIfExists,
-    });
-    return await sendAndConfirmTransaction(connection, transaction, [
-      owner,
-      ...signers,
-    ], { skipPreflight: true, commitment: "processed" });
+    const { transaction, signers } =
+      await this.makePlaceOrderTransaction<Account>(market, {
+        owner,
+        payer,
+        side,
+        price,
+        size,
+        orderType,
+        clientId,
+        openOrdersAddressKey,
+        openOrdersAccount,
+        feeDiscountPubkey,
+        maxTs,
+        replaceIfExists,
+      });
+    return await sendAndConfirmTransaction(
+      connection,
+      transaction,
+      [owner, ...signers],
+      { skipPreflight: true, commitment: 'processed' },
+    );
   }
 
   async makePlaceOrderTransaction<T extends PublicKey | Account>(
@@ -162,15 +178,20 @@ export abstract class Strategy {
     } = params;
     if (market.baseSizeNumberToLots(size).lte(new BN(0))) {
       console.log(`size = ${size}`);
-      console.log(`market.baseSizeNumberToLots(size) = ${market.baseSizeNumberToLots(size)}`);
+      console.log(
+        `market.baseSizeNumberToLots(size) = ${market.baseSizeNumberToLots(
+          size,
+        )}`,
+      );
       throw new Error('size too small');
     }
     if (market.priceNumberToLots(price).lte(new BN(0))) {
       console.log(`price = ${price}`);
-      console.log(`market.priceNumberToLots(price) = ${market.priceNumberToLots(price)}`);
+      console.log(
+        `market.priceNumberToLots(price) = ${market.priceNumberToLots(price)}`,
+      );
       throw new Error('invalid price');
     }
     return market.makeNewOrderV3Instruction(params);
   }
-
 }

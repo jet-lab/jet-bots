@@ -1,2 +1,0 @@
-# Jet Trading Monitor
-

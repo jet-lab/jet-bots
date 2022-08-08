@@ -2,16 +2,15 @@
   "name": "@jet-trading/market-maker",
   "version": "1.0.0",
   "repository": "git@github.com:jet-lab/jet-trading.git",
-  "type": "module",
+  "description": "Sample market making bot.",
+  "license": "Apache-2.0",
   "scripts": {
-    "clean": "shx mkdir -p lib && shx rm -rf lib",
-    "package": "shx mkdir -p lib/cjs lib/esm && echo '{\"type\":\"commonjs\"}' | npx json > ./lib/cjs/package.json && echo '{\"type\":\"module\"} ' | npx json > ./lib/esm/package.json",
-    "prebuild": "pnpm run clean && pnpm run package"
+    "clean": "rm -rf lib/",
+    "build": "yarn clean && tsc"
   },
   "devDependencies": {
     "@types/node": "^17.0.31",
     "@types/yargs": "^17.0.10",
-    "shx": "^0.3.4",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.4"
   },
@@ -21,6 +20,7 @@
     "@pythnetwork/client": "^2.6.3",
     "@solana/spl-token": "^0.2.0",
     "@solana/web3.js": "^1.41.4",
+    "@tsconfig/recommended": "^1.0.1",
     "yargs": "^17.4.1"
   }
 }
