@@ -1,16 +1,17 @@
 {
-  "name": "@jet-trading/sim",
+  "name": "@jet-trading/simulation",
   "version": "1.0.0",
   "repository": "git@github.com:jet-lab/jet-trading.git",
   "description": "Initializes a local simulation environment.",
   "scripts": {
-    "clean": "shx mkdir -p lib && shx rm -rf lib",
-    "package": "shx mkdir -p lib/cjs lib/esm && echo '{\"type\":\"commonjs\"}' | npx json > ./lib/cjs/package.json && echo '{\"type\":\"module\"} ' | npx json > ./lib/esm/package.json",
-    "prebuild": "pnpm run clean && pnpm run package",
-
-    "generate": "ts-node src/generate.ts",
-    "initialize": "ts-node src/initialize.ts"
+    "clean": "rm -rf lib/",
+    "build": "yarn clean && tsc",
+    "generate": "yarn build && ts-node src/generate.ts",
+    "initialize": "yarn build && ts-node src/initialize.ts"
   },
+  "files": [
+    "lib"
+  ],
   "dependencies": {
     "@project-serum/anchor": "^0.24.2",
     "@project-serum/serum": "^0.13.65",

@@ -7,7 +7,7 @@ import { buildInstruction } from '../instructions';
 import { IDL, Pyth } from "./types";
 
 export class PythClient {
-  buildInstruction
+  buildInstruction: any
   commitment: Commitment = "confirmed"
   configuration
   connection: Connection
@@ -23,7 +23,7 @@ export class PythClient {
     this.pythProgramId = new PublicKey(configuration.pythProgramId)
 
     const instructionCoder: InstructionCoder = new BorshInstructionCoder(IDL)
-    const instruction = {}
+    const instruction: any = {}
     IDL.instructions.forEach(idlIx => {
       instruction[idlIx.name] = buildInstruction(
         idlIx,

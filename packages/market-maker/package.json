@@ -1,10 +1,8 @@
 {
-  "name": "@jet-trading/bot",
+  "name": "@jet-trading/market-maker",
   "version": "1.0.0",
-  "main": "index.js",
   "repository": "git@github.com:jet-lab/jet-trading.git",
-  "author": "<mas@jetprotocol.io>",
-  "license": "MIT",
+  "type": "module",
   "scripts": {
     "clean": "shx mkdir -p lib && shx rm -rf lib",
     "package": "shx mkdir -p lib/cjs lib/esm && echo '{\"type\":\"commonjs\"}' | npx json > ./lib/cjs/package.json && echo '{\"type\":\"module\"} ' | npx json > ./lib/esm/package.json",

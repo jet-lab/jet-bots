@@ -52,7 +52,7 @@ export class SwapInitializer {
   orcaSwapProgramId: PublicKey;
   payer: Keypair;
 
-  constructor(configuration, mainnetConfiguration, payer: Keypair) {
+  constructor(configuration: any, mainnetConfiguration: any, payer: Keypair) {
     this.configuration = configuration;
     this.connection = new Connection(configuration.url, this.commitment);
     this.mainnetConfiguration = mainnetConfiguration;

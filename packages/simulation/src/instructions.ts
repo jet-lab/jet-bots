@@ -46,10 +46,10 @@ function accountsArray(
 }
 
 function splitArgsAndCtx(
-  idlIx,
+  idlIx: any,
   args: any[]
 ): [any[], any] {
-  let options = {};
+  let options: any = {};
   const inputLen = idlIx.args ? idlIx.args.length : 0;
   if (args.length > inputLen) {
     if (args.length !== inputLen + 1) {
@@ -125,7 +125,7 @@ export function buildInstruction(
   };
 
   // Utility fn for ordering the accounts for this instruction.
-  ix["accounts"] = (accs) => {
+  ix["accounts"] = (accs: any) => {
     return accountsArray(
       accs,
       idlIx.accounts,

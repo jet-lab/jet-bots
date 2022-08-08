@@ -8,7 +8,7 @@ import * as fs from 'fs';
 
 function regenerateCluster(configuration: any) {
 
-  const newTokens = {};
+  const newTokens: any = {};
   for (const key in configuration.tokens) {
     const existingToken = configuration.tokens[key];
     assert(existingToken);
@@ -26,7 +26,7 @@ function regenerateCluster(configuration: any) {
     };
   }
 
-  const newMarkets = {};
+  const newMarkets: any = {};
   for (const key in configuration.markets) {
     const existingMarket = configuration.markets[key];
     assert(existingMarket);
@@ -82,7 +82,7 @@ function regenerateCluster(configuration: any) {
 
 async function refresh(configuration: any, connection: Connection) {
 
-  const newTokens = {};
+  const newTokens: any = {};
   for (const key in configuration.tokens) {
     const existingToken = configuration.tokens[key];
     assert(existingToken);
@@ -94,7 +94,7 @@ async function refresh(configuration: any, connection: Connection) {
     };
   }
 
-  const newMarkets = {};
+  const newMarkets: any = {};
   for (const key in configuration.markets) {
     const existingMarket = configuration.markets[key];
     assert(existingMarket);

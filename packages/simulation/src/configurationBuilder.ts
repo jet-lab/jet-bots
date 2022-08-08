@@ -25,7 +25,7 @@ export default class ConfigurationBuilder {
 
   public async build() {
 
-    const generatedTokenConfigurations = this.instruments.tokens.map((symbol) => {
+    const generatedTokenConfigurations = this.instruments.tokens.map((symbol: string) => {
       const tokenConfiguration = SOLANA_TOKENS.find((tokenConfiguration) => { return symbol === tokenConfiguration.symbol; });
       assert(tokenConfiguration);
       switch (symbol) {
@@ -105,7 +105,7 @@ export default class ConfigurationBuilder {
     if (this.instruments.oracles && this.instruments.oracles.length > 0) {
       const pythClient = new PythClient({ pythProgramId: "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH", url: "https://api.mainnet-beta.solana.com/" });
 
-      generatedOracleConfigurations = await Promise.all(this.instruments.oracles.map(async (symbol) => {
+      generatedOracleConfigurations = await Promise.all(this.instruments.oracles.map(async (symbol: string) => {
         const oracleConfiguration = PYTH_ORACLES.find((oracleConfiguration) => { return symbol === oracleConfiguration.symbol; });
         assert(oracleConfiguration);
         if (this.config.devnet.oracles && this.config.devnet.oracles[symbol.replace('/', '_')]) {
@@ -131,12 +131,12 @@ export default class ConfigurationBuilder {
     let generatedMarketConfigurations: any[] = [];
 
     if (this.instruments.markets.length > 0) {
-      generatedMarketConfigurations = await Promise.all(this.instruments.markets.map(async (symbol) => {
+      generatedMarketConfigurations = await Promise.all(this.instruments.markets.map(async (symbol: string) => {
         const marketConfiguration = SERUM_MARKETS.find((marketConfiguration) => { return symbol === marketConfiguration.symbol; });
         assert(marketConfiguration);
 
-        const baseToken = generatedTokenConfigurations.find((token) => { return marketConfiguration.baseSymbol === token.symbol; });
-        const quoteToken = generatedTokenConfigurations.find((token) => { return marketConfiguration.quoteSymbol === token.symbol; });
+        const baseToken = generatedTokenConfigurations.find((token: any) => { return marketConfiguration.baseSymbol === token.symbol; });
+        const quoteToken = generatedTokenConfigurations.find((token: any) => { return marketConfiguration.quoteSymbol === token.symbol; });
 
         if (this.config.devnet.markets && this.config.devnet.markets[symbol.replace('/', '_')]) {
           assert(this.config.devnet.markets[symbol.replace('/', '_')].baseMint = baseToken.mint);
@@ -187,8 +187,8 @@ export default class ConfigurationBuilder {
     let generatedPoolConfigurations: any[] = [];
 
     if (this.instruments.tokens.length > 0) {
-      generatedPoolConfigurations = await Promise.all(this.instruments.tokens.map(async (symbol) => {
-        const token = generatedTokenConfigurations.find((token) => { return token.symbol == symbol; });
+      generatedPoolConfigurations = await Promise.all(this.instruments.tokens.map(async (symbol: string) => {
+        const token = generatedTokenConfigurations.find((token: any) => { return token.symbol == symbol; });
         const oracle = generatedOracleConfigurations.find((oracle) => { return oracle.symbol == symbol + '/USD'; });
         if (this.config.devnet.pools && this.config.devnet.pools[symbol.replace('/', '_')]) {
           assert(this.config.devnet.pools[symbol].tokenMint = token.mint);
@@ -218,21 +218,21 @@ export default class ConfigurationBuilder {
             };
           }
         }
-      }).filter(pool => { return pool !== undefined; }));
+      }).filter((pool: any) => { return pool !== undefined; }));
     }
 
     let generatedSwapConfigurations: any[] = [];
 
     if (this.instruments.swaps.length > 0) {
-      generatedSwapConfigurations = await Promise.all(this.instruments.swaps.map(async (symbol) => {
+      generatedSwapConfigurations = await Promise.all(this.instruments.swaps.map(async (symbol: string) => {
         if (this.config.devnet.swaps && this.config.devnet.swaps[symbol.replace('/', '_')]) {
           return this.config.devnet.swaps[symbol.replace('/', '_')];
         } else {
           const swapConfiguration = TOKEN_SWAPS.find((swapConfiguration) => { return symbol === swapConfiguration.symbol; });
           if (swapConfiguration) {
-            const baseToken = generatedTokenConfigurations.find((token) => { return swapConfiguration.baseSymbol === token.symbol; });
+            const baseToken = generatedTokenConfigurations.find((token: any) => { return swapConfiguration.baseSymbol === token.symbol; });
             assert(baseToken);
-            const quoteToken = generatedTokenConfigurations.find((token) => { return swapConfiguration.quoteSymbol === token.symbol; });
+            const quoteToken = generatedTokenConfigurations.find((token: any) => { return swapConfiguration.quoteSymbol === token.symbol; });
             assert(quoteToken);
 
             const swapKeypair: Keypair = Keypair.generate();
@@ -290,7 +290,7 @@ export default class ConfigurationBuilder {
             };
           }
         }
-      }).filter(swap => { return swap !== undefined; }));
+      }).filter((swap: any) => { return swap !== undefined; }));
     }
 
     return [
@@ -325,9 +325,9 @@ export default class ConfigurationBuilder {
       default: { throw new Error(`Invalid environment: ${environment}`); }
     }
 
-    const markets = { };
+    const markets: any = { };
     for (const symbol of this.instruments.markets) {
-      const marketConfiguration = marketConfigurations.find((marketConfiguration) => { return symbol === marketConfiguration.symbol; });
+      const marketConfiguration = marketConfigurations.find((marketConfiguration: any) => { return symbol === marketConfiguration.symbol; });
       assert(marketConfiguration);
        markets[symbol.replace('/', '_')] = {
         symbol,
@@ -335,9 +335,9 @@ export default class ConfigurationBuilder {
       };
     };
 
-    const oracles = { };
+    const oracles: any = { };
     for (const symbol of this.instruments.oracles) {
-      const oracleConfiguration = oracleConfigurations.find((oracleConfiguration) => { return oracleConfiguration.symbol === symbol; });
+      const oracleConfiguration = oracleConfigurations.find((oracleConfiguration: any) => { return oracleConfiguration.symbol === symbol; });
       assert(oracleConfiguration);
       oracles[symbol.replace('/', '_')] = {
         symbol,
@@ -345,9 +345,9 @@ export default class ConfigurationBuilder {
       };
     };
 
-    const pools = { };
+    const pools: any = { };
     for (const symbol of this.instruments.tokens) {
-      const poolConfiguration = poolConfigurations.find((poolConfiguration) => { return poolConfiguration && symbol === poolConfiguration.symbol; });
+      const poolConfiguration = poolConfigurations.find((poolConfiguration: any) => { return poolConfiguration && symbol === poolConfiguration.symbol; });
       if (poolConfiguration) {
         pools[symbol] = {
           symbol,
@@ -356,9 +356,9 @@ export default class ConfigurationBuilder {
       }
     };
 
-    const swaps = { };
+    const swaps: any = { };
     for (const symbol of this.instruments.swaps) {
-      let swapConfiguration = swapConfigurations.find((swapConfiguration) => { return swapConfiguration && symbol === swapConfiguration.symbol; });
+      let swapConfiguration = swapConfigurations.find((swapConfiguration: any) => { return swapConfiguration && symbol === swapConfiguration.symbol; });
       if (swapConfiguration) {
         swaps[symbol.replace('/', '_')] = {
           symbol,
@@ -367,9 +367,9 @@ export default class ConfigurationBuilder {
       }
     };
 
-    const tokens = { };
+    const tokens: any = { };
     for (const symbol of this.instruments.tokens) {
-      const tokenConfiguration = tokenConfigurations.find((tokenConfiguration) => { return symbol === tokenConfiguration.symbol; });
+      const tokenConfiguration = tokenConfigurations.find((tokenConfiguration: any) => { return symbol === tokenConfiguration.symbol; });
       assert(tokenConfiguration);
       tokens[symbol] = {
         symbol,
@@ -410,10 +410,10 @@ export default class ConfigurationBuilder {
   }
 
   private filterSecretKeys(privateObj: any) {
-    let publicObj = {};
+    let publicObj: any = {};
     for (const key of Object.keys(privateObj)) {
       let privateItem = privateObj[key];
-      let publicItem = { };
+      let publicItem: any = { };
       for (const key2 of Object.keys(privateItem)) {
         if (!key2.endsWith('rivateKey') && !key2.endsWith('price') && !key2.endsWith('confidence')) {
           publicItem[key2] = privateItem[key2];

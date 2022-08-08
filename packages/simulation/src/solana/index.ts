@@ -75,7 +75,7 @@ export class SolanaInitializer {
   connection: Connection;
   payer: Keypair;
 
-  constructor(configuration, payer: Keypair) {
+  constructor(configuration: any, payer: Keypair) {
     this.configuration = configuration;
     this.connection = new Connection(configuration.url, this.commitment);
     this.payer = payer;

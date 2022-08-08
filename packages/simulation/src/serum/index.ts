@@ -60,7 +60,7 @@ export class SerumInitializer {
   serumProgramId: PublicKey;
   payer: Keypair;
 
-  constructor(configuration, mainnetConfiguration, payer: Keypair) {
+  constructor(configuration: any, mainnetConfiguration: any, payer: Keypair) {
     this.configuration = configuration;
     this.connection = new Connection(configuration.url, this.commitment);
     this.mainnetConfiguration = mainnetConfiguration;
@@ -209,7 +209,7 @@ export class SerumInitializer {
 
 }
 
-function toPriceLevels(data, depth: number, baseLotSize: number, baseDecimals: number, quoteLotSize: number, quoteDecimals: number): [number, number][] {
+function toPriceLevels(data: any, depth: number, baseLotSize: number, baseDecimals: number, quoteLotSize: number, quoteDecimals: number): [number, number][] {
   const { accountFlags, slab } = decodeOrderBook(data);
   const descending = accountFlags.bids;
   const levels: [BN, BN][] = []; // (price, size)
@@ -227,7 +227,7 @@ function toPriceLevels(data, depth: number, baseLotSize: number, baseDecimals: n
   ]);
 }
 
-function decodeOrderBook(buffer) {
+function decodeOrderBook(buffer: any) {
   const { accountFlags, slab } = ORDERBOOK_LAYOUT.decode(buffer);
   return { accountFlags: accountFlags, slab: slab };
 }
