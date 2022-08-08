@@ -1,15 +1,18 @@
-import { Market } from "@project-serum/serum";
+import { Market } from '@project-serum/serum';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
-import assert from "assert";
+import assert from 'assert';
 import * as fs from 'fs';
 import * as os from 'os';
 
 import { Position } from '../position';
-import { getAssociatedTokenAddress, getSplTokenBalanceFromAccountInfo } from '../utils';
+import {
+  getAssociatedTokenAddress,
+  getSplTokenBalanceFromAccountInfo,
+} from '../utils';
 
-import { Maker } from "./maker";
-import { Taker } from "./taker";
-import { Strategy } from "./strategy";
+import { Maker } from './maker';
+import { Taker } from './taker';
+import { Strategy } from './strategy';
 
 export async function createStrategy(
   type: string,
@@ -20,10 +23,13 @@ export async function createStrategy(
   mainnetConnection: Connection,
   mainnetMarkets: Record<string, Market>,
 ): Promise<Strategy> {
+  const account = new Account(
+    JSON.parse(
+      fs.readFileSync(os.homedir() + `/.config/solana/${type}.json`, 'utf-8'),
+    ),
+  );
 
-  const account = new Account(JSON.parse(fs.readFileSync(os.homedir() + `/.config/solana/${type}.json`, 'utf-8')));
-
-  let feeDiscountPubkey: PublicKey | null = null;
+  const feeDiscountPubkey: PublicKey | null = null;
 
   /*
   const msrmTokenAccounts = await connection.getTokenAccountsByOwner(account.publicKey, { mint: new PublicKey(config.tokens.MSRM.mint) });
@@ -50,22 +56,60 @@ export async function createStrategy(
     const market = markets[marketConfig.symbol];
     assert(market);
 
-    const [ baseTokenAccount, quoteTokenAccount ] = await Promise.all([
-      await getAssociatedTokenAddress(new PublicKey(marketConfig.baseMint), account.publicKey),
-      await getAssociatedTokenAddress(new PublicKey(marketConfig.quoteMint), account.publicKey),
+    const [baseTokenAccount, quoteTokenAccount] = await Promise.all([
+      await getAssociatedTokenAddress(
+        new PublicKey(marketConfig.baseMint),
+        account.publicKey,
+      ),
+      await getAssociatedTokenAddress(
+        new PublicKey(marketConfig.quoteMint),
+        account.publicKey,
+      ),
     ]);
 
-    const openOrdersAccount = await Position.getOrCreateOpenOrdersAccount(connection, market.address, account, market.programId);
+    const openOrdersAccount = await Position.getOrCreateOpenOrdersAccount(
+      connection,
+      market.address,
+      account,
+      market.programId,
+    );
 
-    const position = new Position(marketConfig, connection, account, baseTokenAccount, quoteTokenAccount, market, openOrdersAccount);
+    const position = new Position(
+      marketConfig,
+      connection,
+      account,
+      baseTokenAccount,
+      quoteTokenAccount,
+      market,
+      openOrdersAccount,
+    );
     await position.init();
     positions[marketConfig.symbol] = position;
   }
 
   switch (type) {
-    case 'maker': return new Maker(connection, account, feeDiscountPubkey, positions, markets, mainnetConnection!, mainnetMarkets!);
-    case 'taker': return new Taker(connection, account, feeDiscountPubkey, positions, markets);
-    default: { console.log(`Unhandled strategy type: ${type}`); process.exit(); break; }
+    case 'maker':
+      return new Maker(
+        connection,
+        account,
+        feeDiscountPubkey,
+        positions,
+        markets,
+        mainnetConnection!,
+        mainnetMarkets!,
+      );
+    case 'taker':
+      return new Taker(
+        connection,
+        account,
+        feeDiscountPubkey,
+        positions,
+        markets,
+      );
+    default: {
+      console.log(`Unhandled strategy type: ${type}`);
+      process.exit();
+      break;
+    }
   }
-
 }

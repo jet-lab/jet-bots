@@ -1,9 +1,23 @@
-import { BN } from "@project-serum/anchor";
-import { createAssociatedTokenAccountInstruction, createInitializeMintInstruction, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Commitment, Connection, Keypair, PublicKey, sendAndConfirmTransaction, SystemProgram, Transaction } from '@solana/web3.js';
+import { BN } from '@project-serum/anchor';
+import {
+  createAssociatedTokenAccountInstruction,
+  createInitializeMintInstruction,
+  getMinimumBalanceForRentExemptMint,
+  MINT_SIZE,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
+import {
+  Commitment,
+  Connection,
+  Keypair,
+  PublicKey,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  Transaction,
+} from '@solana/web3.js';
 import assert from 'assert';
 
-import { airdropTokens } from "../solana/faucet";
+import { airdropTokens } from '../solana/faucet';
 
 export class SwapChecker {
   commitment: Commitment = 'confirmed';
@@ -16,26 +30,77 @@ export class SwapChecker {
   }
 
   async check() {
-    let swaps: any[] = [];
+    const swaps: any[] = [];
     for (const key in this.configuration.swaps) {
       swaps.push(this.configuration.swaps[key]);
     }
 
     for (const swap of swaps) {
       console.log(`SWAP: ${swap.symbol}`);
-      console.log(`  swap = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.swap)))}`);
-      console.log(`  authority = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.authority)))}`);
-      console.log(`  poolTokenMint = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.poolTokenMint)))}`);
-      console.log(`  baseMint = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.baseMint)))}`);
-      console.log(`  baseVault = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.baseVault)))}`);
-      console.log(`  quoteMint = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.quoteMint)))}`);
-      console.log(`  quoteVault = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.quoteVault)))}`);
-      console.log(`  feeAccount = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.feeAccount)))}`);
-      console.log(`  recipientAccount = ${JSON.stringify(await this.connection.getParsedAccountInfo(new PublicKey(swap.recipientAccount)))}`);
+      console.log(
+        `  swap = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(new PublicKey(swap.swap)),
+        )}`,
+      );
+      console.log(
+        `  authority = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.authority),
+          ),
+        )}`,
+      );
+      console.log(
+        `  poolTokenMint = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.poolTokenMint),
+          ),
+        )}`,
+      );
+      console.log(
+        `  baseMint = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.baseMint),
+          ),
+        )}`,
+      );
+      console.log(
+        `  baseVault = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.baseVault),
+          ),
+        )}`,
+      );
+      console.log(
+        `  quoteMint = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.quoteMint),
+          ),
+        )}`,
+      );
+      console.log(
+        `  quoteVault = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.quoteVault),
+          ),
+        )}`,
+      );
+      console.log(
+        `  feeAccount = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.feeAccount),
+          ),
+        )}`,
+      );
+      console.log(
+        `  recipientAccount = ${JSON.stringify(
+          await this.connection.getParsedAccountInfo(
+            new PublicKey(swap.recipientAccount),
+          ),
+        )}`,
+      );
       console.log('');
     }
   }
-
 }
 
 export const CurveType = Object.freeze({
@@ -62,22 +127,25 @@ export class SwapInitializer {
   }
 
   async initialize(): Promise<void> {
-    let swaps: any[] = [];
+    const swaps: any[] = [];
     for (const key in this.configuration.swaps) {
       swaps.push(this.configuration.swaps[key]);
     }
 
-    let tokens: any[] = [];
+    const tokens: any[] = [];
     for (const key in this.configuration.tokens) {
       tokens.push(this.configuration.tokens[key]);
     }
 
     await Promise.all(
-      swaps.map(async (swap) => {
-
-        const baseToken = tokens.find((token) => { return token.mint === swap.baseMint; });
+      swaps.map(async swap => {
+        const baseToken = tokens.find(token => {
+          return token.mint === swap.baseMint;
+        });
         assert(baseToken);
-        const quoteToken = tokens.find((token) => { return token.mint === swap.quoteMint; });
+        const quoteToken = tokens.find(token => {
+          return token.mint === swap.quoteMint;
+        });
         assert(quoteToken);
 
         if (baseToken.faucet && quoteToken.faucet) {
@@ -86,34 +154,48 @@ export class SwapInitializer {
 
           if (swap.swapPrivateKey) {
             assert(swap.swapPrivateKey);
-            const swapAccount = Keypair.fromSecretKey(Buffer.from(swap.swapPrivateKey, 'base64'));
+            const swapAccount = Keypair.fromSecretKey(
+              Buffer.from(swap.swapPrivateKey, 'base64'),
+            );
 
-            const accountInfo = await this.connection.getAccountInfo(swapAccount.publicKey);
+            const accountInfo = await this.connection.getAccountInfo(
+              swapAccount.publicKey,
+            );
             if (!accountInfo) {
               console.log(`createSwap(${swap.symbol})`);
 
-              const [authority, bumpSeed] = await PublicKey.findProgramAddress([swapAccount.publicKey.toBuffer()], this.orcaSwapProgramId);
+              const [authority, bumpSeed] = await PublicKey.findProgramAddress(
+                [swapAccount.publicKey.toBuffer()],
+                this.orcaSwapProgramId,
+              );
               assert(authority.equals(new PublicKey(swap.authority)));
 
               assert(swap.poolTokenMintPrivateKey);
-              const poolTokenMint = Keypair.fromSecretKey(Buffer.from(swap.poolTokenMintPrivateKey, 'base64'));
+              const poolTokenMint = Keypair.fromSecretKey(
+                Buffer.from(swap.poolTokenMintPrivateKey, 'base64'),
+              );
 
               assert(swap.feeAccountOwnerPrivateKey);
-              const feeAccountOwner = Keypair.fromSecretKey(Buffer.from(swap.feeAccountOwnerPrivateKey, 'base64'));
+              const feeAccountOwner = Keypair.fromSecretKey(
+                Buffer.from(swap.feeAccountOwnerPrivateKey, 'base64'),
+              );
 
               assert(swap.recipientAccountOwnerPrivateKey);
-              const recipientAccountOwner = Keypair.fromSecretKey(Buffer.from(swap.recipientAccountOwnerPrivateKey, 'base64'));
+              const recipientAccountOwner = Keypair.fromSecretKey(
+                Buffer.from(swap.recipientAccountOwnerPrivateKey, 'base64'),
+              );
 
               await sendAndConfirmTransaction(
                 this.connection,
                 new Transaction().add(
-
                   // Create pool mint.
                   SystemProgram.createAccount({
                     fromPubkey: this.payer.publicKey,
                     newAccountPubkey: poolTokenMint.publicKey,
                     space: MINT_SIZE,
-                    lamports: await getMinimumBalanceForRentExemptMint(this.connection),
+                    lamports: await getMinimumBalanceForRentExemptMint(
+                      this.connection,
+                    ),
                     programId: TOKEN_PROGRAM_ID,
                   }),
                   createInitializeMintInstruction(
@@ -154,15 +236,28 @@ export class SwapInitializer {
                     authority,
                     new PublicKey(swap.quoteMint),
                   ),
-
                 ),
                 [this.payer, poolTokenMint],
               );
 
               assert(this.configuration.splTokenFaucet);
               await Promise.all([
-                await airdropTokens(this.connection, this.payer, baseFaucet, new PublicKey(swap.baseVault), new BN(swap.baseAmount * 10 ** baseToken.decimals), new PublicKey(this.configuration.splTokenFaucet)),
-                await airdropTokens(this.connection, this.payer, quoteFaucet, new PublicKey(swap.quoteVault), new BN(swap.quoteAmount * 10 ** quoteToken.decimals), new PublicKey(this.configuration.splTokenFaucet)),
+                await airdropTokens(
+                  this.connection,
+                  this.payer,
+                  baseFaucet,
+                  new PublicKey(swap.baseVault),
+                  new BN(swap.baseAmount * 10 ** baseToken.decimals),
+                  new PublicKey(this.configuration.splTokenFaucet),
+                ),
+                await airdropTokens(
+                  this.connection,
+                  this.payer,
+                  quoteFaucet,
+                  new PublicKey(swap.quoteVault),
+                  new BN(swap.quoteAmount * 10 ** quoteToken.decimals),
+                  new PublicKey(this.configuration.splTokenFaucet),
+                ),
               ]);
 
               //TODO
@@ -196,8 +291,7 @@ export class SwapInitializer {
             }
           }
         }
-      })
+      }),
     );
   }
-
 }

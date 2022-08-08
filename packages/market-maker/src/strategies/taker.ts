@@ -26,8 +26,8 @@ export class Taker extends Strategy {
     asks: Orderbook,
     bids: Orderbook,
   ): Promise<[OrderParams[], Order[]]> {
-    let newOrders: OrderParams[] = [];
-    let staleOrders: Order[] = [];
+    const newOrders: OrderParams[] = [];
+    const staleOrders: Order[] = [];
 
     assert(this.positions[symbol]);
 

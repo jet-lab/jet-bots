@@ -20,9 +20,9 @@ export class Position {
   market: Market;
   openOrdersAccount: PublicKey;
 
-  balance: number = 0;
-  baseTokenBalance: number = 0;
-  quoteTokenBalance: number = 0;
+  balance = 0;
+  baseTokenBalance = 0;
+  quoteTokenBalance = 0;
 
   constructor(
     config: any,
@@ -43,7 +43,7 @@ export class Position {
   }
 
   async init(): Promise<void> {
-    let openOrdersAccountInfo = await this.connection.getAccountInfo(
+    const openOrdersAccountInfo = await this.connection.getAccountInfo(
       this.openOrdersAccount,
     );
     assert(openOrdersAccountInfo);
@@ -94,7 +94,7 @@ export class Position {
       });
       if (hasOrders) continue;
 
-      let transaction = new Transaction();
+      const transaction = new Transaction();
 
       if (
         Number(openOrders.baseTokenFree) > 0 ||
@@ -165,7 +165,7 @@ export class Position {
 
     const openOrdersAccount = new Account();
 
-    let transaction = new Transaction().add(
+    const transaction = new Transaction().add(
       await OpenOrders.makeCreateAccountTransaction(
         connection,
         marketAddress,
@@ -210,7 +210,7 @@ export class Position {
       this.market.programId,
     );
 
-    let transaction = new Transaction().add(
+    const transaction = new Transaction().add(
       DexInstructions.settleFunds({
         market: this.market.address,
         openOrders: this.openOrdersAccount,
