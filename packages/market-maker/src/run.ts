@@ -12,174 +12,141 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-import { Configuration, loadConfig } from './configuration';
-import { Controller } from './controller';
-import { Oracle } from './oracle';
-import { createStrategy } from './strategies';
-import { Strategy } from './strategies/strategy';
-import { sleep } from './utils';
+import { createBot } from './bots';
+import { Context } from './context';
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export class Controller {
+  isRunning = true;
+  interval = 4000;
+
+  constructor(context: Context) {
+    process.on('SIGINT', async () => {
+      console.log('Caught keyboard interrupt.');
+
+      this.isRunning = false;
+
+      // Wait for the main loop to  exit.
+      await sleep(this.interval);
+
+      /*
+      if (context.bot) {
+        await context.bot.cancelOpenOrders();
+        await context.bot.closeOpenOrdersAccounts();
+      }
+      */
+
+      console.log(`MARKET MAKER EXITED`);
+
+      process.exit();
+    });
+
+    process.on('unhandledRejection', (err, promise) => {
+      console.error(
+        'Unhandled rejection (promise: ',
+        promise,
+        ', reason: ',
+        err,
+        ').',
+      );
+    });
+  }
+}
 
 async function run() {
-  const configuration = new Configuration();
-  const mainnetConfig = loadConfig('mainnet');
+  const context = new Context({ botFactory: createBot });
+  await context.load();
 
-  const connection = new Connection(
-    configuration.config.url,
-    'processed' as Commitment,
-  );
-  const mainnetConnection = new Connection(
-    mainnetConfig.url,
-    'processed' as Commitment,
-  );
+  const mainnetContext = new Context({ cluster: 'mainnet-beta' });
+  await context.loadOracle(mainnetContext.connection);
 
-  assert(configuration.config.serumProgramId);
-  const serumProgramId = new PublicKey(configuration.config.serumProgramId);
-  assert(mainnetConfig.serumProgramId);
-  const mainnetSerumProgramId = new PublicKey(mainnetConfig.serumProgramId);
-
-  //const oracles: Record<string, Oracle> = {};
-  //for (const oracleConfig of Object.values<any>(mainnetConfig.oracles)) {
-  //assert(oracleConfig.address);
-  //assert(mainnetConfig.pythProgramId);
-  //oracles[oracleConfig.symbol] = new Oracle(oracleConfig, mainnetConnection, new PublicKey(oracleConfig.address), new PublicKey(mainnetConfig.pythProgramId));
-  //}
-
-  const marketConfigs: Record<string, any> = {};
-  const markets: Record<string, Market> = {};
-  for (const marketConfig of Object.values<any>(configuration.config.markets)) {
-    marketConfigs[marketConfig.symbol] = marketConfig;
-    markets[marketConfig.symbol] = await Market.load(
-      connection,
-      new PublicKey(marketConfig.market),
-      { skipPreflight: true, commitment: 'processed' },
-      serumProgramId,
-    );
-  }
-
-  const mainnetMarkets: Record<string, Market> = {};
-  for (const mainnetMarketConfigs of Object.values<any>(
-    mainnetConfig.markets,
-  )) {
-    mainnetMarkets[mainnetMarketConfigs.symbol] = await Market.load(
-      mainnetConnection,
-      new PublicKey(mainnetMarketConfigs.market),
-      { skipPreflight: true, commitment: 'processed' },
-      mainnetSerumProgramId,
-    );
-  }
-
-  const strategies: Strategy[] = [];
-  for (const type of configuration.strategies) {
-    strategies.push(
-      await createStrategy(
-        type,
-        connection,
-        configuration.config,
-        marketConfigs,
-        markets,
-        mainnetConnection,
-        mainnetMarkets,
-      ),
-    );
-  }
-
-  const controller = new Controller(strategies);
-
+  const controller = new Controller(context);
   console.log(`MAKING MARKETS`);
 
   while (controller.isRunning) {
-    for (const marketConfig of Object.values<any>(
-      configuration.config.markets,
-    )) {
+    for (const marketConfig of Object.values<any>(context.config.markets)) {
       try {
-        const symbol = marketConfig.symbol;
-        assert(markets[symbol]);
-
-        //const oracleSymbol = marketConfig.baseSymbol + '/USD';
-        //assert(oracles[oracleSymbol]);
-
+        /*
         //const [ asks, bids, price ]: [ Orderbook, Orderbook, void] = await Promise.all([
         const [asks, bids]: [Orderbook, Orderbook] = await Promise.all([
           await markets[symbol].loadAsks(connection),
           await markets[symbol].loadBids(connection),
-          //await oracles[oracleSymbol].fetchPrice(),
         ]);
-
+        */
+        //TODO
+        /*
         if (configuration.verbose && asks && bids) {
           console.log(`asks = ${JSON.stringify(asks.getL2(10))}`);
           console.log(`bids = ${JSON.stringify(bids.getL2(10))}`);
         }
-
-        for (
-          let strategyIndex = 0;
-          strategyIndex < strategies.length;
-          strategyIndex++
-        ) {
+        */
+        /*
           const [openOrdersAccountInfo]: [AccountInfo<Buffer> | null, void] =
             await Promise.all([
               await connection.getAccountInfo(
-                strategies[strategyIndex].positions[symbol].openOrdersAccount,
+                context.bots[i].positions[symbol].openOrdersAccount,
               ),
-              await strategies[strategyIndex].positions[symbol].fetchBalances(),
+              await context.bots[i].positions[symbol].fetchBalances(),
             ]);
-
+          */
+        //TODO
+        /*
           if (configuration.verbose) {
             console.log(
               `Account balance = ${
-                strategies[strategyIndex].positions[symbol].balance /
+                context.bots[i].positions[symbol].balance /
                 LAMPORTS_PER_SOL
               } SOL`,
             );
             console.log(
               `Base token balance = ${JSON.stringify(
-                strategies[strategyIndex].positions[symbol].baseTokenBalance,
+                context.bots[i].positions[symbol].baseTokenBalance,
               )}`,
             );
             console.log(
               `Quote token balance = ${JSON.stringify(
-                strategies[strategyIndex].positions[symbol].quoteTokenBalance,
+                context.bots[i].positions[symbol].quoteTokenBalance,
               )}`,
             );
           }
-
+          */
+        /*
           if (openOrdersAccountInfo) {
             const openOrders = OpenOrders.fromAccountInfo(
-              strategies[strategyIndex].positions[symbol].openOrdersAccount,
+              context.bots[i].positions[symbol].openOrdersAccount,
               openOrdersAccountInfo,
               markets[symbol].programId,
             );
 
-            //const [ newOrders, cancelOrders ]: [OrderParams[], Order[]] = await strategies[strategyIndex].update(symbol, asks, bids, openOrders.orders.filter((orderId) => { return !orderId.eq(new BN(0)); }));
-            const [newOrders, cancelOrders]: [OrderParams[], Order[]] =
-              await strategies[strategyIndex].update(symbol, asks, bids);
-
-            await strategies[strategyIndex].updateOrders(
+            //const [ newOrders, cancelOrders ]: [OrderParams[], Order[]] = await context.bots[i].update(symbol, asks, bids, openOrders.orders.filter((orderId) => { return !orderId.eq(new BN(0)); }));
+            const [newOrders, cancelOrders]: [OrderParams[], Order[]] = await context.bots[i].update(symbol, asks, bids);
+            */
+        /*
+            await context.bots[i].updateOrders(
               markets[symbol],
               newOrders,
               cancelOrders,
             );
-
+            */
+        /*
             if (
               openOrders.baseTokenFree.gt(new BN(0)) ||
               openOrders.quoteTokenFree.gt(new BN(0))
             ) {
-              await strategies[strategyIndex].positions[symbol].settleFunds();
+              await context.bots[i].positions[symbol].settleFunds();
             }
+            */
+        /*
           }
-        }
+          */
       } catch (e) {
         console.log(e);
       }
     }
 
-    if (configuration.verbose) {
-      console.log(
-        `${new Date().toUTCString()} sleeping for ${
-          controller.interval / 1000
-        }s`,
-      );
-      console.log('');
-    }
     await sleep(controller.interval);
   }
 

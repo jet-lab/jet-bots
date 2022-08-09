@@ -2,11 +2,13 @@
   "name": "@jet-trading/market-maker",
   "version": "1.0.0",
   "repository": "git@github.com:jet-lab/jet-trading.git",
-  "description": "Sample market making bot.",
-  "license": "Apache-2.0",
+  "description": "Example market making bot.",
+  "license": "MIT",
   "scripts": {
     "clean": "rm -rf lib/",
-    "build": "yarn clean && tsc"
+    "build": "yarn clean && tsc",
+    "maker": "ts-node src/run.ts -b maker -c d -k ~/.config/solana/maker.json",
+    "taker": "ts-node src/run.ts -b taker -c d -k ~/.config/solana/taker.json"
   },
   "devDependencies": {
     "@types/node": "^17.0.31",

@@ -11,10 +11,8 @@ import {
   Transaction,
 } from '@solana/web3.js';
 import assert from 'assert';
-import * as fs from 'fs';
-import * as os from 'os';
 
-import { loadConfig } from './configuration';
+import { loadConfig } from './context';
 import { getAssociatedTokenAddress, sleep } from './utils';
 
 async function crank() {

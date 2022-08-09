@@ -4,20 +4,15 @@ import { Order, OrderParams } from '@project-serum/serum/lib/market';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 import assert from 'assert';
 
-import { Position } from '../position';
-import { Strategy } from './strategy';
+import { Bot, Context } from '../context';
 
-import PARAMS from '../params/taker.json';
+const PARAMS = {
+  p: 0.1,
+};
 
-export class Taker extends Strategy {
-  constructor(
-    connection: Connection,
-    account: Account,
-    feeDiscountPubkey: PublicKey | null,
-    positions: Record<string, Position>,
-    markets: Record<string, Market>,
-  ) {
-    super(connection, account, feeDiscountPubkey, positions, markets);
+export class Taker extends Bot {
+  constructor(context: Context) {
+    super(context);
   }
 
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
@@ -29,7 +24,7 @@ export class Taker extends Strategy {
     const newOrders: OrderParams[] = [];
     const staleOrders: Order[] = [];
 
-    assert(this.positions[symbol]);
+    assert(this.context.positions[symbol]);
 
     const p = Math.random();
 
@@ -39,18 +34,20 @@ export class Taker extends Strategy {
       if (priceLevels.length == 1) {
         const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
           priceLevels[0];
+        /*
         newOrders.push({
-          owner: this.account,
-          payer: this.positions[symbol].baseTokenAccount,
+          owner: this.context.account,
+          payer: this.context.positions[symbol].baseTokenAccount,
           side: 'sell',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
+          openOrdersAddressKey: this.context.positions[symbol].openOrdersAccount,
           feeDiscountPubkey: this.feeDiscountPubkey,
           selfTradeBehavior: 'abortTransaction',
         });
+          */
       }
     } else if (p > 1 - PARAMS.p) {
       const priceLevels = asks.getL2(1);
@@ -58,18 +55,20 @@ export class Taker extends Strategy {
       if (priceLevels.length == 1) {
         const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
           priceLevels[0];
+        /*
         newOrders.push({
           owner: this.account,
-          payer: this.positions[symbol].quoteTokenAccount,
+          payer: this.context.positions[symbol].quoteTokenAccount,
           side: 'buy',
           price,
           size,
           orderType: 'limit',
           //clientId: undefined,
-          openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
+          openOrdersAddressKey: this.context.positions[symbol].openOrdersAccount,
           feeDiscountPubkey: this.feeDiscountPubkey,
           selfTradeBehavior: 'abortTransaction',
         });
+          */
       }
     }
 

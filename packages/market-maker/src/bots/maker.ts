@@ -3,27 +3,15 @@ import { Market, Orderbook } from '@project-serum/serum';
 import { Order, OrderParams } from '@project-serum/serum/lib/market';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 
-import { Position } from '../position';
-import { Strategy } from './strategy';
+import { Bot, Context } from '../context';
 
-import PARAMS from '../params/maker.json';
+const PARAMS = {
+  depth: 10,
+};
 
-export class Maker extends Strategy {
-  mainnetConnection: Connection;
-  mainnetMarkets: Record<string, Market>;
-
-  constructor(
-    connection: Connection,
-    account: Account,
-    feeDiscountPubkey: PublicKey | null,
-    positions: Record<string, Position>,
-    markets: Record<string, Market>,
-    mainnetConnection: Connection,
-    mainnetMarkets: Record<string, Market>,
-  ) {
-    super(connection, account, feeDiscountPubkey, positions, markets);
-    this.mainnetConnection = mainnetConnection;
-    this.mainnetMarkets = mainnetMarkets;
+export class Maker extends Bot {
+  constructor(context: Context) {
+    super(context);
   }
 
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
@@ -37,6 +25,7 @@ export class Maker extends Strategy {
 
     const depth = PARAMS.depth;
 
+    /*
     const [mainnetAsk, mainnetBid] = await Promise.all([
       await this.mainnetMarkets[symbol].loadAsks(this.mainnetConnection),
       await this.mainnetMarkets[symbol].loadBids(this.mainnetConnection),
@@ -44,11 +33,13 @@ export class Maker extends Strategy {
 
     const mainnetAskPriceLevels = mainnetAsk.getL2(depth);
     const mainnetBidPriceLevels = mainnetBid.getL2(depth);
+    */
 
     /*
     if (openOrders.length == 0) {
     */
 
+    /*
     mainnetAskPriceLevels.forEach(priceLevel => {
       const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
         priceLevel;
@@ -84,6 +75,7 @@ export class Maker extends Strategy {
         selfTradeBehavior: 'abortTransaction',
       });
     });
+      */
 
     /*
     } else {
