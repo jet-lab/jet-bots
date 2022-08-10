@@ -8,4 +8,4 @@ solana-keygen new --no-bip39-passphrase --outfile ~/.config/solana/taker.json
 solana -k ~/.config/solana/taker.json -u d airdrop 2
 sleep 2
 
-yarn ts-node src/faucet.ts
+yarn ts-node src/tools/faucet.ts

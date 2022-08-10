@@ -38,9 +38,9 @@ export class Context {
   connection: Connection;
   //TODO
   //feeDiscountPubkey: PublicKey | null;
-  markets: Record<string, Market> = {};
-  oracles: Record<string, Oracle> = {};
-  positions: Record<string, Position> = {};
+  markets: Record<string, MarketContext> = {};
+  oracles: Record<string, OracleContext> = {};
+  positions: Record<string, PositionContext> = {};
   serumProgramId: PublicKey;
 
   constructor(params: { botFactory?: BotFactory; cluster?: Cluster }) {
@@ -71,19 +71,24 @@ export class Context {
   }
 
   async load(): Promise<void> {
+    for (const marketConfig of Object.values<any>(this.config.markets)) {
+      const marketContext = new MarketContext(this, marketConfig);
+      this.markets[marketConfig.symbol] = marketContext;
+      await marketContext.load();
+    }
+
     for (const oracleConfig of Object.values<any>(this.config.oracles)) {
-      this.oracles[oracleConfig.symbol] = new Oracle(this, oracleConfig);
+      const oracleContext = new OracleContext(this, oracleConfig);
+      this.oracles[oracleConfig.symbol] = oracleContext;
+      await oracleContext.load();
     }
 
     for (const tokenConfig of Object.values<any>(this.config.tokens)) {
-      this.positions[tokenConfig.symbol] = new Position(this, tokenConfig);
+      const positionContext = new PositionContext(this, tokenConfig);
+      this.positions[tokenConfig.symbol] = positionContext;
+      //await positionContext.init();
+      await positionContext.load();
     }
-
-    //for (const oracleConfig of Object.values<any>(mainnetConfig.oracles)) {
-    //assert(oracleConfig.address);
-    //assert(mainnetConfig.pythProgramId);
-    //oracles[oracleConfig.symbol] = new Oracle(oracleConfig, mainnetConnection, new PublicKey(oracleConfig.address), new PublicKey(mainnetConfig.pythProgramId));
-    //}
 
     /*
     for (const marketConfig of Object.values<any>(config.markets)) {
@@ -103,40 +108,6 @@ export class Context {
         market.address,
         account,
         serumProgramId,
-      );
-
-      const position = new Position(
-        marketConfig,
-        connection,
-        account,
-        baseTokenAccount,
-        quoteTokenAccount,
-        market,
-        openOrdersAccount,
-      );
-      await position.init();
-      positions[marketConfig.symbol] = position;
-    }
-    */
-
-    for (const marketConfig of Object.values<any>(this.config.markets)) {
-      /*
-      this.markets[marketConfig.symbol] = await Market.load(
-        this.connection,
-        new PublicKey(marketConfig.market),
-        { skipPreflight: true, commitment: 'processed' },
-        this.serumProgramId,
-      );
-      */
-    }
-
-    /*
-    for (const strategyType of this.botTypes) {
-      this.bots.push(
-        await createBot(
-          strategyType,
-          this,
-        ),
       );
     }
     */
@@ -364,36 +335,49 @@ export abstract class Bot {
   */
 }
 
-export class Oracle {
+export class MarketContext {
   context: Context;
-  oracleConfig: any;
-  //address: PublicKey;
-  //pythProgramId: PublicKey;
+  marketConfig: any;
 
-  price: PriceData | undefined;
+  market?: Market;
 
-  constructor(
-    context: Context,
-    oracleConfig: any,
-    //address: PublicKey,
-    //pythProgramId: PublicKey,
-  ) {
+  constructor(context: Context, marketConfig: any) {
     this.context = context;
-    this.oracleConfig = oracleConfig;
-    //this.address = address;
-    //this.pythProgramId = pythProgramId;
+    this.marketConfig = marketConfig;
   }
 
-  async fetchPrice(): Promise<void> {
-    //TODO
-    /*
-    const accountInfo = await this.context.connection.getAccountInfo(this.address);
-    this.price = parsePriceData(accountInfo!.data)
-    */
+  async load(): Promise<void> {
+    assert(this.context.config.serumProgramId);
+    this.market = await Market.load(
+      this.context.connection,
+      new PublicKey(this.marketConfig.market),
+      { skipPreflight: true, commitment: 'processed' },
+      new PublicKey(this.context.config.serumProgramId),
+    );
   }
 }
 
-export class Position {
+export class OracleContext {
+  context: Context;
+  oracleConfig: any;
+
+  price?: PriceData;
+
+  constructor(context: Context, oracleConfig: any) {
+    this.context = context;
+    this.oracleConfig = oracleConfig;
+  }
+
+  async load(): Promise<void> {
+    assert(this.oracleConfig.oracle);
+    const accountInfo = await this.context.connection.getAccountInfo(
+      new PublicKey(this.oracleConfig.oracle),
+    );
+    this.price = parsePriceData(accountInfo!.data);
+  }
+}
+
+export class PositionContext {
   context: Context;
   tokenConfig: any;
 
@@ -424,7 +408,7 @@ export class Position {
   }
 
   //TODO
-  async fetchBalances() {
+  async load(): Promise<void> {
     this.balance = await this.context.connection.getBalance(
       this.context.account!.publicKey,
     );

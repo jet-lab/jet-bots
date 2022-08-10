@@ -15,22 +15,16 @@ This will create two new file system wallets; one for a market maker and one for
 There are three scripts for running the bots, from another command line run one of the following:
 
 ```shell
-./run_maker.sh
+yarn maker
 ```
 
 This will create a market maker which will post orders to the order books listed in config.json. The orders are meant to replicate the corresponding order book currently on mainnet.
 
 ```shell
-./run_taker.sh
+yarn taker
 ```
 
 This will randomly take from the top of the book.
-
-```shell
-./run_maker_taker.sh
-```
-
-Finally, you can run both the maker and the taker and have them trade with one another.
 
 After running the bot(s), press CTRL+C to exit. The bot will then cancel any orders it has in the book. This may take a minute or two to complete.
 
@@ -40,7 +34,7 @@ After running the bot(s), press CTRL+C to exit. The bot will then cancel any ord
 While running the market making bot it is often useful to be able to inspect the value of the Solana accounts being used. To print out the relevant details you can run the monitor script in the src directory.
 
 ```shell
-cd src
+cd src/tools
 ./monitor.ts
 ```
 
@@ -50,7 +44,7 @@ cd src
 If you have orders that are matched a crank will help settle your trade. You can try running the crank yourself by running crank.ts.
 
 ```shell
-cd src
+cd src/tools
 ./crank.ts
 ```
 
