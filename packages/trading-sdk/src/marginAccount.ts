@@ -12,17 +12,27 @@ import {
 import { TokenAccount } from './tokenAccount';
 
 export class MarginAccount {
+  address: PublicKey;
   connection: Connection;
-  owner: Account;
+  delegate?: Account;
+  owner?: Account;
   payer: Account;
 
   payerBalance: number = 0;
   tokens: Record<string, TokenAccount> = {};
 
-  constructor(connection: Connection, owner: Account, payer: Account) {
-    this.connection = connection;
-    this.owner = owner;
-    this.payer = payer;
+  constructor(params: {
+    address: PublicKey;
+    connection: Connection;
+    delegate?: Account;
+    owner?: Account;
+    payer: Account;
+  }) {
+    this.address = params.address;
+    this.connection = params.connection;
+    this.delegate = params.delegate;
+    this.owner = params.owner;
+    this.payer = params.payer;
   }
 
   //static async create(connection: Connection, owner: Account, payer: Account): Promise<MarginAccount> {
@@ -39,7 +49,7 @@ export class MarginAccount {
     );
 
     const response = await this.connection.getTokenAccountsByOwner(
-      this.owner.publicKey,
+      this.address,
       {
         programId: TOKEN_PROGRAM_ID,
       },
@@ -77,8 +87,6 @@ export class MarginAccount {
             Buffer.from(accountInfo.data),
           );
           token.balance = tokenAccount.amount;
-          //TODO
-          //console.log(``);
         },
         'confirmed' as Commitment,
       );
@@ -87,7 +95,17 @@ export class MarginAccount {
 
   async closeAccount(): Promise<void> {}
 
+  async borrow(mint: PublicKey, amount: number): Promise<void> {}
+
   async deposit(mint: PublicKey, amount: number): Promise<void> {}
+
+  async repay(mint: PublicKey, amount: number): Promise<void> {}
+
+  async setLimits(
+    mint: PublicKey,
+    minAmount: number,
+    maxAmount: number,
+  ): Promise<void> {}
 
   async withdraw(mint: PublicKey, amount: number): Promise<void> {}
 }

@@ -59,6 +59,7 @@ export class Context {
       );
     } else {
       const argv: any = yargs(process.argv.slice(2)).options({
+        a: { alias: 'account', required: true, type: 'string' },
         b: { alias: 'bot', required: true, type: 'string' },
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
@@ -69,7 +70,12 @@ export class Context {
         'processed' as Commitment,
       );
       const account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
-      this.marginAccount = new MarginAccount(this.connection, account, account);
+      this.marginAccount = new MarginAccount({
+        address: new PublicKey(argv.a),
+        connection: this.connection,
+        owner: account,
+        payer: account,
+      });
       if (params.marketDataContext) {
         this.bot = params.botFactory!(argv.b, this, params.marketDataContext);
       } else {
@@ -465,10 +471,11 @@ export class PositionContext2 {
   */
 
   async closeOpenOrdersAccounts() {
+    /*
     console.log(
       `closeOpenOrdersAccounts ${this.context.marginAccount!.owner.publicKey}`,
     );
-
+    */
     /*
     const openOrdersAccounts = await findOpenOrdersAccounts(
       this.connection,
