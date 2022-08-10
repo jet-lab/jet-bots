@@ -3,7 +3,7 @@ import { Market, Orderbook } from '@project-serum/serum';
 import { Order, OrderParams } from '@project-serum/serum/lib/market';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 
-import { Bot, Context } from '../context';
+import { Bot, Context, MarketContext, OracleContext } from '../context';
 
 const PARAMS = {
   depth: 10,
@@ -12,6 +12,29 @@ const PARAMS = {
 export class Maker extends Bot {
   constructor(tradingContext: Context, marketDataContext: Context) {
     super(tradingContext, marketDataContext);
+  }
+
+  process(): void {
+    console.log('');
+    console.log('');
+    for (const oracle of Object.values<OracleContext>(
+      this.marketDataContext.oracles,
+    )) {
+      if (oracle.price) {
+        console.log(
+          `${oracle.oracleConfig.symbol} price = ${oracle.price.price}`,
+        );
+      }
+    }
+    console.log('');
+    for (const market of Object.values<MarketContext>(
+      this.marketDataContext.markets,
+    )) {
+      if (market.market) {
+        console.log(`${market.marketConfig.symbol} ${market.market.address}`);
+      }
+    }
+    console.log('');
   }
 
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {

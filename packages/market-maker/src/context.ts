@@ -6,12 +6,18 @@ import {
   OpenOrders,
   Orderbook,
 } from '@project-serum/serum';
-import { Order, OrderParams } from '@project-serum/serum/lib/market';
+import {
+  MARKET_STATE_LAYOUT_V2,
+  Order,
+  OrderParams,
+} from '@project-serum/serum/lib/market';
 import {
   Account,
+  AccountInfo,
   Cluster,
   Commitment,
   Connection,
+  Context as SolanaContext,
   LAMPORTS_PER_SOL,
   PublicKey,
   sendAndConfirmTransaction,
@@ -44,7 +50,7 @@ export class Context {
   markets: Record<string, MarketContext> = {};
   oracles: Record<string, OracleContext> = {};
   //positions: Record<string, PositionContext> = {};
-  serumProgramId: PublicKey;
+  //serumProgramId: PublicKey;
 
   constructor(params: {
     botFactory?: BotFactory;
@@ -59,7 +65,9 @@ export class Context {
       );
     } else {
       const argv: any = yargs(process.argv.slice(2)).options({
+        /*
         a: { alias: 'account', required: true, type: 'string' },
+        */
         b: { alias: 'bot', required: true, type: 'string' },
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
@@ -70,12 +78,14 @@ export class Context {
         'processed' as Commitment,
       );
       const account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
+      /*
       this.marginAccount = new MarginAccount({
         address: new PublicKey(argv.a),
         connection: this.connection,
         owner: account,
         payer: account,
       });
+      */
       if (params.marketDataContext) {
         this.bot = params.botFactory!(argv.b, this, params.marketDataContext);
       } else {
@@ -83,13 +93,13 @@ export class Context {
       }
     }
 
-    assert(this.config.serumProgramId);
-    this.serumProgramId = new PublicKey(this.config.serumProgramId);
+    //assert(this.config.serumProgramId);
+    //this.serumProgramId = new PublicKey(this.config.serumProgramId);
   }
 
   async listen(): Promise<void> {
     if (this.marginAccount) {
-      await this.marginAccount.listen();
+      //await this.marginAccount.listen();
     }
 
     for (const market of Object.values<MarketContext>(this.markets)) {
@@ -103,7 +113,7 @@ export class Context {
 
   async load(): Promise<void> {
     if (this.marginAccount) {
-      await this.marginAccount.load();
+      //await this.marginAccount.load();
     }
 
     for (const marketConfig of Object.values<any>(this.config.markets)) {
@@ -209,6 +219,8 @@ export abstract class Bot {
     this.tradingContext = tradingContext;
     this.marketDataContext = marketDataContext;
   }
+
+  abstract process(): void;
 
   /*
   async cancelOpenOrders() {
@@ -386,12 +398,27 @@ export class MarketContext {
   }
 
   async listen(): Promise<void> {
-    //TODO
-    //this.connection.onAccountChange();
+    assert(this.marketConfig.market);
+    this.context.connection.onAccountChange(
+      new PublicKey(this.marketConfig.market),
+      (accountInfo: AccountInfo<Buffer>, context: SolanaContext) => {
+        assert(this.market);
+        const m = this.market as any;
+        this.market = new Market(
+          MARKET_STATE_LAYOUT_V2.decode(accountInfo.data),
+          m._baseMintDecimals,
+          m._quoteMintDecimals,
+          m._options,
+          m._programId,
+        );
+      },
+      'processed' as Commitment,
+    );
   }
 
   async load(): Promise<void> {
     assert(this.context.config.serumProgramId);
+    assert(this.marketConfig.market);
     this.market = await Market.load(
       this.context.connection,
       new PublicKey(this.marketConfig.market),
@@ -413,8 +440,14 @@ export class OracleContext {
   }
 
   async listen(): Promise<void> {
-    //TODO
-    //this.connection.onAccountChange();
+    this.context.connection.onAccountChange(
+      new PublicKey(this.oracleConfig.address),
+      (accountInfo: AccountInfo<Buffer>, context: SolanaContext) => {
+        this.price = parsePriceData(accountInfo!.data);
+        //console.log(`${this.oracleConfig.symbol} price = ${this.price.price}`);
+      },
+      'processed' as Commitment,
+    );
   }
 
   async load(): Promise<void> {
@@ -423,6 +456,7 @@ export class OracleContext {
       new PublicKey(this.oracleConfig.address),
     );
     this.price = parsePriceData(accountInfo!.data);
+    //console.log(`${this.oracleConfig.symbol} price = ${this.price.price}`);
   }
 }
 

@@ -15,6 +15,8 @@ export class Taker extends Bot {
     super(tradingContext, marketDataContext);
   }
 
+  process(): void {}
+
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
   async update(
     symbol: string,
