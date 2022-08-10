@@ -10,8 +10,8 @@ const PARAMS = {
 };
 
 export class Maker extends Bot {
-  constructor(context: Context) {
-    super(context);
+  constructor(tradingContext: Context, marketDataContext: Context) {
+    super(tradingContext, marketDataContext);
   }
 
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {

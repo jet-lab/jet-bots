@@ -11,8 +11,8 @@ const PARAMS = {
 };
 
 export class Taker extends Bot {
-  constructor(context: Context) {
-    super(context);
+  constructor(tradingContext: Context, marketDataContext: Context) {
+    super(tradingContext, marketDataContext);
   }
 
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {
@@ -24,7 +24,9 @@ export class Taker extends Bot {
     const newOrders: OrderParams[] = [];
     const staleOrders: Order[] = [];
 
-    assert(this.context.positions[symbol]);
+    /*
+    assert(this.tradingContext.positions[symbol]);
+    */
 
     const p = Math.random();
 

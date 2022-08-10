@@ -57,16 +57,21 @@ export class Controller {
 }
 
 async function run() {
-  const context = new Context({ botFactory: createBot });
+  const mainnetContext = new Context({ cluster: 'mainnet-beta' });
+  await mainnetContext.load();
+
+  const context = new Context({
+    botFactory: createBot,
+    marketDataContext: mainnetContext,
+  });
   await context.load();
 
-  const mainnetContext = new Context({ cluster: 'mainnet-beta' });
-  await context.loadOracle(mainnetContext.connection);
+  await mainnetContext.listen();
+  await context.listen();
 
   const controller = new Controller(context);
 
-  console.log(`MAKING MARKETS`);
-  console.log(`Press Ctrl+C to exit`);
+  console.log(`MARKET MAKER RUNNING - Press Ctrl+C to exit.`);
   console.log(``);
 
   while (controller.isRunning) {
