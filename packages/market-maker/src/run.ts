@@ -64,7 +64,10 @@ async function run() {
   await context.loadOracle(mainnetContext.connection);
 
   const controller = new Controller(context);
+
   console.log(`MAKING MARKETS`);
+  console.log(`Press Ctrl+C to exit`);
+  console.log(``);
 
   while (controller.isRunning) {
     for (const marketConfig of Object.values<any>(context.config.markets)) {

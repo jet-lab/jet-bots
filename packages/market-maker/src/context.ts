@@ -12,6 +12,7 @@ import {
   Cluster,
   Commitment,
   Connection,
+  LAMPORTS_PER_SOL,
   PublicKey,
   sendAndConfirmTransaction,
   Transaction,
@@ -20,6 +21,8 @@ import {
 import assert from 'assert';
 import * as fs from 'fs';
 import yargs from 'yargs/yargs';
+
+import { MarginAccount } from '../../trading-sdk/src/marginAccount';
 
 //import { findOpenOrdersAccounts, getAssociatedTokenAddress } from './utils';
 
@@ -30,7 +33,7 @@ export interface BotFactory {
 }
 
 export class Context {
-  account?: Account;
+  marginAccount?: MarginAccount;
   bot?: Bot;
   config: any;
   //oracle?: Oracle;
@@ -46,6 +49,10 @@ export class Context {
   constructor(params: { botFactory?: BotFactory; cluster?: Cluster }) {
     if (params.cluster) {
       this.config = loadConfig(params.cluster);
+      this.connection = new Connection(
+        this.config.url,
+        'processed' as Commitment,
+      );
     } else {
       const argv: any = yargs(process.argv.slice(2)).options({
         b: { alias: 'bot', required: true, type: 'string' },
@@ -53,14 +60,14 @@ export class Context {
         k: { alias: 'keyfile', required: true, type: 'string' },
       }).argv;
       this.config = loadConfig(argv.c);
-      this.account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
+      this.connection = new Connection(
+        this.config.url,
+        'processed' as Commitment,
+      );
+      const account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
+      this.marginAccount = new MarginAccount(this.connection, account, account);
       this.bot = params.botFactory!(this, argv.b);
     }
-
-    this.connection = new Connection(
-      this.config.url,
-      'processed' as Commitment,
-    );
 
     assert(this.config.serumProgramId);
     this.serumProgramId = new PublicKey(this.config.serumProgramId);
@@ -71,6 +78,8 @@ export class Context {
   }
 
   async load(): Promise<void> {
+    await this.marginAccount!.load();
+
     for (const marketConfig of Object.values<any>(this.config.markets)) {
       const marketContext = new MarketContext(this, marketConfig);
       this.markets[marketConfig.symbol] = marketContext;
@@ -369,9 +378,9 @@ export class OracleContext {
   }
 
   async load(): Promise<void> {
-    assert(this.oracleConfig.oracle);
+    assert(this.oracleConfig.address);
     const accountInfo = await this.context.connection.getAccountInfo(
-      new PublicKey(this.oracleConfig.oracle),
+      new PublicKey(this.oracleConfig.address),
     );
     this.price = parsePriceData(accountInfo!.data);
   }
@@ -387,7 +396,6 @@ export class PositionContext {
   //market: Market;
   //openOrdersAccount: PublicKey;
 
-  balance = 0;
   baseTokenBalance = 0;
   quoteTokenBalance = 0;
 
@@ -409,9 +417,6 @@ export class PositionContext {
 
   //TODO
   async load(): Promise<void> {
-    this.balance = await this.context.connection.getBalance(
-      this.context.account!.publicKey,
-    );
     //this.baseTokenBalance = (await this.getTokenBalance(this.baseTokenAccount))!;
     //this.quoteTokenBalance = (await this.getTokenBalance(this.quoteTokenAccount))!;
   }
@@ -426,7 +431,9 @@ export class PositionContext {
   */
 
   async closeOpenOrdersAccounts() {
-    console.log(`closeOpenOrdersAccounts ${this.context.account!.publicKey}`);
+    console.log(
+      `closeOpenOrdersAccounts ${this.context.marginAccount!.owner.publicKey}`,
+    );
 
     /*
     const openOrdersAccounts = await findOpenOrdersAccounts(
