@@ -1,6 +1,5 @@
 import { BN } from '@project-serum/anchor';
 import { Market, OpenOrders } from '@project-serum/serum';
-import { ORDERBOOK_LAYOUT } from '@project-serum/serum/lib/market';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
@@ -177,51 +176,5 @@ export async function getVaultOwnerAndNonce(publicKey: PublicKey, programId: Pub
 
 export function sleep(ms: number) {
   return new Promise( resolve => setTimeout(resolve, ms) );
-}
-
-export function toPriceLevels(data, depth: number, baseLotSize: number, baseDecimals: number, quoteLotSize: number, quoteDecimals: number): [number, number][] {
-  const { accountFlags, slab } = decodeOrderBook(data);
-  const descending = accountFlags.bids;
-  const levels: [BN, BN][] = []; // (price, size)
-  for (const { key, quantity } of slab.items(descending)) {
-    const price = key.ushrn(64);
-    if (levels.length > 0 && levels[levels.length - 1][0].eq(price)) {
-      levels[levels.length - 1][1].iadd(quantity);
-    } else {
-      levels.push([price, quantity]);
-    }
-  }
-  return levels.slice(0, 7).map(([priceLots, sizeLots]) => [
-    priceLotsToNumber(priceLots, new BN(baseLotSize), baseDecimals, new BN(quoteLotSize), quoteDecimals),
-    baseSizeLotsToNumber(sizeLots, new BN(baseLotSize), baseDecimals),
-  ]);
-}
-
-function decodeOrderBook(buffer) {
-  const { accountFlags, slab } = ORDERBOOK_LAYOUT.decode(buffer);
-  return { accountFlags: accountFlags, slab: slab };
-}
-
-function priceLotsToNumber(price: BN, baseLotSize: BN, baseSplTokenDecimals: number, quoteLotSize: BN, quoteSplTokenDecimals: number) {
-  return divideBnToNumber(price.mul(quoteLotSize).mul(baseSplTokenMultiplier(baseSplTokenDecimals)), baseLotSize.mul(quoteSplTokenMultiplier(quoteSplTokenDecimals)));
-}
-
-function baseSizeLotsToNumber(size: BN, baseLotSize: BN, baseSplTokenDecimals: number) {
-  return divideBnToNumber(size.mul(baseLotSize), baseSplTokenMultiplier(baseSplTokenDecimals));
-}
-
-function divideBnToNumber(numerator: BN, denominator: BN): number {
-  const quotient = numerator.div(denominator).toNumber();
-  const rem = numerator.umod(denominator);
-  const gcd = rem.gcd(denominator);
-  return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber();
-}
-
-function baseSplTokenMultiplier(baseSplTokenDecimals: number) {
-  return new BN(10).pow(new BN(baseSplTokenDecimals));
-}
-
-function quoteSplTokenMultiplier(quoteSplTokenDecimals: number) {
-  return new BN(10).pow(new BN(quoteSplTokenDecimals));
 }
 */

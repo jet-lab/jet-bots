@@ -1,17 +1,5 @@
 #!/usr/bin/env ts-node
 
-import { BN } from '@project-serum/anchor';
-import { Market, OpenOrders, Orderbook } from '@project-serum/serum';
-import { Order, OrderParams } from '@project-serum/serum/lib/market';
-import {
-  AccountInfo,
-  Commitment,
-  Connection,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-} from '@solana/web3.js';
-import assert from 'assert';
-
 import { createBot } from './bots';
 import { Context } from './context';
 
@@ -19,7 +7,7 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export class Controller {
+class Controller {
   isRunning = true;
   interval = 4000;
 
@@ -32,12 +20,9 @@ export class Controller {
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
-      /*
       if (context.bot) {
-        await context.bot.cancelOpenOrders();
-        await context.bot.closeOpenOrdersAccounts();
+        await context.bot.close();
       }
-      */
 
       console.log(`MARKET MAKER EXITED`);
 

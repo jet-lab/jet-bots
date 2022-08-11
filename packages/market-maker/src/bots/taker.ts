@@ -4,7 +4,7 @@ import { Order, OrderParams } from '@project-serum/serum/lib/market';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 import assert from 'assert';
 
-import { Bot, Context } from '../context';
+import { Bot, Context, PythOracle, SerumMarket } from '../';
 
 const PARAMS = {
   p: 0.1,

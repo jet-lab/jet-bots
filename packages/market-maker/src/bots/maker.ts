@@ -3,7 +3,7 @@ import { Market, Orderbook } from '@project-serum/serum';
 import { Order, OrderParams } from '@project-serum/serum/lib/market';
 import { Account, Connection, PublicKey } from '@solana/web3.js';
 
-import { Bot, Context, MarketContext, OracleContext } from '../context';
+import { Bot, Context, PythOracle, SerumMarket } from '../';
 
 const PARAMS = {
   depth: 10,
@@ -15,26 +15,31 @@ export class Maker extends Bot {
   }
 
   process(): void {
-    console.log('');
-    console.log('');
-    for (const oracle of Object.values<OracleContext>(
+    //console.log('');
+    //console.log('');
+    for (const oracle of Object.values<PythOracle>(
       this.marketDataContext.oracles,
     )) {
       if (oracle.price) {
-        console.log(
-          `${oracle.oracleConfig.symbol} price = ${oracle.price.price}`,
-        );
+        //console.log(`${oracle.oracleConfig.symbol} price = ${oracle.price.price}`);
       }
     }
-    console.log('');
-    for (const market of Object.values<MarketContext>(
+    //console.log('');
+    for (const market of Object.values<SerumMarket>(
       this.marketDataContext.markets,
     )) {
       if (market.market) {
-        console.log(`${market.marketConfig.symbol} ${market.market.address}`);
+        //console.log(`${market.marketConfig.symbol} ${market.market.address}`);
+        if (market.bids) {
+          //console.log(`bids = ${JSON.stringify(market.toPriceLevels(market.bids))}`);
+        }
+        if (market.asks) {
+          //console.log(`asks = ${JSON.stringify(market.toPriceLevels(market.asks))}`);
+        }
+        //console.log(`events = ${JSON.stringify(market.parseFillEvents())}`);
       }
     }
-    console.log('');
+    //console.log('');
   }
 
   //async update(symbol: string, asks: Orderbook, bids: Orderbook, openOrders: Order[]): Promise<[OrderParams[], Order[]]> {

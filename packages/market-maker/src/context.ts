@@ -9,8 +9,10 @@ import {
 import {
   MARKET_STATE_LAYOUT_V2,
   Order,
+  ORDERBOOK_LAYOUT,
   OrderParams,
 } from '@project-serum/serum/lib/market';
+import { decodeEventQueue, Event } from '@project-serum/serum/lib/queue';
 import {
   Account,
   AccountInfo,
@@ -32,6 +34,9 @@ import { MarginAccount } from '../../trading-sdk/src/marginAccount';
 
 //import { findOpenOrdersAccounts, getAssociatedTokenAddress } from './utils';
 
+import { PythOracle } from './pyth';
+import { SerumMarket } from './serum';
+
 import CONFIG from './config.json';
 
 export interface BotFactory {
@@ -39,18 +44,14 @@ export interface BotFactory {
 }
 
 export class Context {
-  marginAccount?: MarginAccount;
   bot?: Bot;
   config: any;
-  //oracle?: Oracle;
+  marginAccount?: MarginAccount;
 
   connection: Connection;
-  //TODO
-  //feeDiscountPubkey: PublicKey | null;
-  markets: Record<string, MarketContext> = {};
-  oracles: Record<string, OracleContext> = {};
+  markets: Record<string, SerumMarket> = {};
+  oracles: Record<string, PythOracle> = {};
   //positions: Record<string, PositionContext> = {};
-  //serumProgramId: PublicKey;
 
   constructor(params: {
     botFactory?: BotFactory;
@@ -92,9 +93,6 @@ export class Context {
         this.bot = params.botFactory!(argv.b, this, this);
       }
     }
-
-    //assert(this.config.serumProgramId);
-    //this.serumProgramId = new PublicKey(this.config.serumProgramId);
   }
 
   async listen(): Promise<void> {
@@ -102,12 +100,12 @@ export class Context {
       //await this.marginAccount.listen();
     }
 
-    for (const market of Object.values<MarketContext>(this.markets)) {
-      await market.listen();
+    for (const market of Object.values<SerumMarket>(this.markets)) {
+      await market.listen(this.connection);
     }
 
-    for (const oracle of Object.values<OracleContext>(this.oracles)) {
-      await oracle.listen();
+    for (const oracle of Object.values<PythOracle>(this.oracles)) {
+      await oracle.listen(this.connection);
     }
   }
 
@@ -117,16 +115,24 @@ export class Context {
     }
 
     for (const marketConfig of Object.values<any>(this.config.markets)) {
-      const marketContext = new MarketContext(this, marketConfig);
-      this.markets[marketConfig.symbol] = marketContext;
-      await marketContext.load();
+      const market = new SerumMarket(marketConfig);
+      this.markets[marketConfig.symbol] = market;
     }
+    assert(this.config.serumProgramId);
+    await SerumMarket.load(
+      this.connection,
+      new PublicKey(this.config.serumProgramId),
+      Object.values<SerumMarket>(this.markets),
+    );
 
     for (const oracleConfig of Object.values<any>(this.config.oracles)) {
-      const oracleContext = new OracleContext(this, oracleConfig);
-      this.oracles[oracleConfig.symbol] = oracleContext;
-      await oracleContext.load();
+      const oracle = new PythOracle(oracleConfig);
+      this.oracles[oracleConfig.symbol] = oracle;
     }
+    await PythOracle.load(
+      this.connection,
+      Object.values<PythOracle>(this.oracles),
+    );
 
     /*
     for (const tokenConfig of Object.values<any>(this.config.tokens)) {
@@ -218,6 +224,13 @@ export abstract class Bot {
   constructor(tradingContext: Context, marketDataContext: Context) {
     this.tradingContext = tradingContext;
     this.marketDataContext = marketDataContext;
+  }
+
+  async close(): Promise<void> {
+    /*
+    await context.bot.cancelOpenOrders();
+    await context.bot.closeOpenOrdersAccounts();
+    */
   }
 
   abstract process(): void;
@@ -384,80 +397,6 @@ export abstract class Bot {
     return market.makeNewOrderV3Instruction(params);
   }
   */
-}
-
-export class MarketContext {
-  context: Context;
-  marketConfig: any;
-
-  market?: Market;
-
-  constructor(context: Context, marketConfig: any) {
-    this.context = context;
-    this.marketConfig = marketConfig;
-  }
-
-  async listen(): Promise<void> {
-    assert(this.marketConfig.market);
-    this.context.connection.onAccountChange(
-      new PublicKey(this.marketConfig.market),
-      (accountInfo: AccountInfo<Buffer>, context: SolanaContext) => {
-        assert(this.market);
-        const m = this.market as any;
-        this.market = new Market(
-          MARKET_STATE_LAYOUT_V2.decode(accountInfo.data),
-          m._baseMintDecimals,
-          m._quoteMintDecimals,
-          m._options,
-          m._programId,
-        );
-      },
-      'processed' as Commitment,
-    );
-  }
-
-  async load(): Promise<void> {
-    assert(this.context.config.serumProgramId);
-    assert(this.marketConfig.market);
-    this.market = await Market.load(
-      this.context.connection,
-      new PublicKey(this.marketConfig.market),
-      { skipPreflight: true, commitment: 'processed' },
-      new PublicKey(this.context.config.serumProgramId),
-    );
-  }
-}
-
-export class OracleContext {
-  context: Context;
-  oracleConfig: any;
-
-  price?: PriceData;
-
-  constructor(context: Context, oracleConfig: any) {
-    this.context = context;
-    this.oracleConfig = oracleConfig;
-  }
-
-  async listen(): Promise<void> {
-    this.context.connection.onAccountChange(
-      new PublicKey(this.oracleConfig.address),
-      (accountInfo: AccountInfo<Buffer>, context: SolanaContext) => {
-        this.price = parsePriceData(accountInfo!.data);
-        //console.log(`${this.oracleConfig.symbol} price = ${this.price.price}`);
-      },
-      'processed' as Commitment,
-    );
-  }
-
-  async load(): Promise<void> {
-    assert(this.oracleConfig.address);
-    const accountInfo = await this.context.connection.getAccountInfo(
-      new PublicKey(this.oracleConfig.address),
-    );
-    this.price = parsePriceData(accountInfo!.data);
-    //console.log(`${this.oracleConfig.symbol} price = ${this.price.price}`);
-  }
 }
 
 export class PositionContext2 {
