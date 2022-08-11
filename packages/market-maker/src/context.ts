@@ -1,4 +1,3 @@
-import { OrderParams } from '@project-serum/serum/lib/market';
 import {
   Account,
   Cluster,
@@ -22,53 +21,51 @@ export interface BotFactory {
 }
 
 export class Context {
+  args: any;
   bot?: Bot;
   config: any;
   marginAccount?: MarginAccount;
+  symbols: string[] = [];
 
   connection: Connection;
   markets: Record<string, SerumMarket> = {};
   oracles: Record<string, PythOracle> = {};
 
-  constructor(params: {
-    botFactory?: BotFactory;
-    cluster?: Cluster;
-    marketDataContext?: Context;
-  }) {
+  constructor(
+    params: {
+      cluster?: Cluster;
+      symbols?: string[];
+    } = {},
+  ) {
     if (params.cluster) {
-      this.config = loadConfig(params.cluster);
+      this.symbols = params.symbols!;
+      assert(this.symbols);
+      this.config = filterConfig(loadConfig(params.cluster), this.symbols);
       this.connection = new Connection(
         this.config.url,
         'processed' as Commitment,
       );
     } else {
-      const argv: any = yargs(process.argv.slice(2)).options({
-        /*
-        a: { alias: 'account', required: true, type: 'string' },
-        */
+      this.args = yargs(process.argv.slice(2)).options({
         b: { alias: 'bot', required: true, type: 'string' },
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        s: { alias: 'symbols', required: true, type: 'string' },
       }).argv;
-      this.config = loadConfig(argv.c);
+      this.symbols = this.args.s.split(',');
+      this.config = filterConfig(loadConfig(this.args.c), this.symbols);
       this.connection = new Connection(
         this.config.url,
         'processed' as Commitment,
       );
-      const account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
-      /*
+      const account = new Account(
+        JSON.parse(fs.readFileSync(this.args.k, 'utf-8')),
+      );
       this.marginAccount = new MarginAccount({
-        address: new PublicKey(argv.a),
         connection: this.connection,
         owner: account,
         payer: account,
       });
-      */
-      if (params.marketDataContext) {
-        this.bot = params.botFactory!(argv.b, this, params.marketDataContext);
-      } else {
-        this.bot = params.botFactory!(argv.b, this, this);
-      }
     }
   }
 
@@ -86,7 +83,23 @@ export class Context {
     }
   }
 
-  async load(): Promise<void> {
+  async load(
+    params: { botFactory?: BotFactory; marketDataContext?: Context } = {},
+  ): Promise<void> {
+    if (params.botFactory) {
+      assert(this.args.b);
+      assert(params.marketDataContext);
+      if (params.marketDataContext) {
+        this.bot = params.botFactory!(
+          this.args.b,
+          this,
+          params.marketDataContext,
+        );
+      } else {
+        this.bot = params.botFactory!(this.args.b, this, this);
+      }
+    }
+
     if (this.marginAccount) {
       await this.marginAccount.load();
     }
@@ -113,6 +126,53 @@ export class Context {
   }
 }
 
+export abstract class Bot {
+  tradingContext: Context;
+  marketDataContext: Context;
+
+  constructor(tradingContext: Context, marketDataContext: Context) {
+    this.tradingContext = tradingContext;
+    this.marketDataContext = marketDataContext;
+  }
+
+  abstract process(): void;
+
+  sendOrders(orders: any[]): void {
+    if (this.tradingContext.marginAccount) {
+      this.tradingContext.marginAccount.sendOrders(orders);
+    }
+  }
+}
+
+function filterConfig(config: any, symbols: string[]) {
+  const filteredConfig = { ...config };
+  filteredConfig.markets = {};
+  Object.values<any>(config.markets)
+    .filter(market => {
+      return symbols.includes(market.symbol);
+    })
+    .forEach(market => {
+      filteredConfig.markets[market.symbol.replace('/', '_')] = market;
+    });
+  filteredConfig.oracles = {};
+  Object.values<any>(config.oracles)
+    .filter(oracle => {
+      return (
+        symbols.includes(oracle.symbol + 'C') ||
+        symbols.includes(oracle.symbol + 'T')
+      );
+    })
+    .forEach(oracle => {
+      filteredConfig.oracles[oracle.symbol.replace('/', '_')] = oracle;
+    });
+  console.log(JSON.stringify(filteredConfig));
+  console.log('');
+  console.log(JSON.stringify(config));
+  console.log('');
+  console.log('');
+  return filteredConfig;
+}
+
 function loadConfig(cluster: string): any {
   switch (cluster) {
     case 'd':
@@ -133,31 +193,6 @@ function loadConfig(cluster: string): any {
     }
     default: {
       throw new Error(`Invalid cluster: ${cluster}`);
-    }
-  }
-}
-
-export abstract class Bot {
-  tradingContext: Context;
-  marketDataContext: Context;
-
-  constructor(tradingContext: Context, marketDataContext: Context) {
-    this.tradingContext = tradingContext;
-    this.marketDataContext = marketDataContext;
-  }
-
-  async close2(): Promise<void> {
-    /*
-    await context.bot.cancelOpenOrders();
-    await context.bot.closeOpenOrdersAccounts();
-    */
-  }
-
-  abstract process(): void;
-
-  sendOrders(orders: any[]): void {
-    if (this.tradingContext.marginAccount) {
-      this.tradingContext.marginAccount.sendOrders(orders);
     }
   }
 }

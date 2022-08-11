@@ -20,8 +20,8 @@ class Controller {
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
-      if (context.bot) {
-        await context.bot.close();
+      if (context.marginAccount) {
+        await context.marginAccount.stop();
       }
 
       console.log(`MARKET MAKER EXITED`);
@@ -42,15 +42,17 @@ class Controller {
 }
 
 async function run() {
-  const mainnetContext = new Context({ cluster: 'mainnet-beta' });
-
-  const context = new Context({
-    botFactory: createBot,
-    marketDataContext: mainnetContext,
+  const context = new Context();
+  const mainnetContext = new Context({
+    cluster: 'mainnet-beta',
+    symbols: context.symbols,
   });
 
   await mainnetContext.load();
-  await context.load();
+  await context.load({
+    botFactory: createBot,
+    marketDataContext: mainnetContext,
+  });
 
   await mainnetContext.listen();
   await context.listen();

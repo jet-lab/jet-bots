@@ -34,9 +34,9 @@ import assert from 'assert';
 import { TokenAccount } from './tokenAccount';
 
 export class MarginAccount {
-  address: PublicKey;
+  //address: PublicKey;
   connection: Connection;
-  delegate?: Account;
+  //delegate?: Account;
   owner?: Account;
   payer: Account;
 
@@ -44,15 +44,15 @@ export class MarginAccount {
   tokens: Record<string, TokenAccount> = {};
 
   constructor(params: {
-    address: PublicKey;
+    //address: PublicKey;
     connection: Connection;
-    delegate?: Account;
+    //delegate?: Account;
     owner?: Account;
     payer: Account;
   }) {
-    this.address = params.address;
+    //this.address = params.address;
     this.connection = params.connection;
-    this.delegate = params.delegate;
+    //this.delegate = params.delegate;
     this.owner = params.owner;
     this.payer = params.payer;
   }
@@ -61,6 +61,13 @@ export class MarginAccount {
   //const marginAccount = new MarginAccount(connection, owner, payer);
   //return marginAccount;
   //}
+
+  async stop(): Promise<void> {
+    /*
+    await context.bot.cancelOpenOrders();
+    await context.bot.closeOpenOrdersAccounts();
+    */
+  }
 
   async load(): Promise<void> {
     this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
@@ -71,7 +78,7 @@ export class MarginAccount {
     );
 
     const response = await this.connection.getTokenAccountsByOwner(
-      this.address,
+      this.owner!.publicKey, //TODO replace account with a trading account, this.address,
       {
         programId: TOKEN_PROGRAM_ID,
       },
@@ -124,6 +131,12 @@ export class MarginAccount {
   async repay(mint: PublicKey, amount: number): Promise<void> {}
 
   sendOrders(orders: any[]): void {
+    async () => {
+      try {
+        //TODO
+      } catch (err) {}
+    };
+
     //TODO
     /*
     //owner: this.account,
@@ -154,6 +167,149 @@ export interface OrderParams<T = Account> extends OrderParamsBase<T>, OrderParam
     replaceIfExists?: boolean;
 }
     */
+  }
+
+  async update(
+    symbol: string,
+    asks: Orderbook,
+    bids: Orderbook,
+  ): Promise<[OrderParams[], Order[]]> {
+    const newOrders: OrderParams[] = [];
+    const staleOrders: Order[] = [];
+
+    /*
+    const [mainnetAsk, mainnetBid] = await Promise.all([
+      await this.mainnetMarkets[symbol].loadAsks(this.mainnetConnection),
+      await this.mainnetMarkets[symbol].loadBids(this.mainnetConnection),
+    ]);
+
+    const mainnetAskPriceLevels = mainnetAsk.getL2(depth);
+    const mainnetBidPriceLevels = mainnetBid.getL2(depth);
+    */
+
+    /*
+    if (openOrders.length == 0) {
+    */
+
+    /*
+    mainnetAskPriceLevels.forEach(priceLevel => {
+      const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
+        priceLevel;
+      console.log(`ASK ${price} ${size}`);
+      newOrders.push({
+        owner: this.account,
+        payer: this.positions[symbol].baseTokenAccount,
+        side: 'sell',
+        price,
+        size,
+        orderType: 'limit',
+        //clientId: undefined,
+        openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
+        feeDiscountPubkey: null,
+        selfTradeBehavior: 'abortTransaction',
+      });
+    });
+
+    mainnetBidPriceLevels.forEach(priceLevel => {
+      const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
+        priceLevel;
+      console.log(`BID ${price} ${size}`);
+      newOrders.push({
+        owner: this.account,
+        payer: this.positions[symbol].quoteTokenAccount,
+        side: 'buy',
+        price,
+        size,
+        orderType: 'limit',
+        //clientId: undefined,
+        openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
+        feeDiscountPubkey: null,
+        selfTradeBehavior: 'abortTransaction',
+      });
+    });
+      */
+
+    /*
+    } else {
+
+      mainnetAskPriceLevels.forEach((priceLevel) => {
+        const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+        let order;
+        for (const item of asks.items()) {
+          if (item.price == price) {
+            order = item;
+            break;
+          }
+        }
+        if (!order) {
+          newOrders.push({
+            owner: this.account,
+            payer: this.positions[symbol].baseTokenAccount,
+            side: 'sell',
+            price,
+            size,
+            orderType: 'limit',
+            //clientId: undefined,
+            openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
+            feeDiscountPubkey: null,
+            selfTradeBehavior: 'abortTransaction',
+          });
+        }
+      });
+
+      openOrders.forEach((order) => {
+        if (order.side == 'sell') {
+          const priceLevel = mainnetAskPriceLevels.find((priceLevel) => {
+            const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+            return priceLots.eq(order.priceLots);
+          });
+          if (!priceLevel) {
+            staleOrders.push(order);
+          }
+        }
+      });
+
+      mainnetBidPriceLevels.forEach((priceLevel) => {
+        const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+        let order;
+        for (const item of bids.items()) {
+          if (item.price == price) {
+            order = item;
+            break;
+          }
+        }
+        if (!order) {
+          newOrders.push({
+            owner: this.account,
+            payer: this.positions[symbol].quoteTokenAccount,
+            side: 'buy',
+            price,
+            size,
+            orderType: 'limit',
+            //clientId: undefined,
+            openOrdersAddressKey: this.positions[symbol].openOrdersAccount,
+            feeDiscountPubkey: null,
+            selfTradeBehavior: 'abortTransaction',
+          });
+        }
+      });
+
+      openOrders.forEach((order) => {
+        if (order.side == 'buy') {
+          const priceLevel = mainnetBidPriceLevels.find((priceLevel) => {
+            const [ price, size, priceLots, sizeLots ]: [number, number, BN, BN] = priceLevel;
+            return priceLots.eq(order.priceLots);
+          });
+          if (!priceLevel) {
+            staleOrders.push(order);
+          }
+        }
+      });
+
+    }
+    */
+
+    return [newOrders, staleOrders];
   }
 
   async setLimits(
@@ -519,9 +675,11 @@ export class PositionContext2 {
     */
   }
 
+  /*
   async getBalance(publicKey: PublicKey) {
     return await this.context.connection.getBalance(publicKey, 'processed');
   }
+  */
 
   static async getOrCreateOpenOrdersAccount(
     connection: Connection,
@@ -572,6 +730,7 @@ export class PositionContext2 {
     throw new Error('Implement');
   }
 
+  /*
   async getTokenBalance(tokenAddress: PublicKey) {
     const balance = await this.context.connection.getTokenAccountBalance(
       tokenAddress,
@@ -579,6 +738,7 @@ export class PositionContext2 {
     );
     return balance.value.uiAmount;
   }
+  */
 
   /*
   async settleFunds() {

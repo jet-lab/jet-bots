@@ -47,12 +47,8 @@ export class SerumMarket {
           this.events = decodeEventQueue(accountInfo!.data, this.seqNum);
           for (const event of this.events) {
             if (event.seqNum) {
-              console.log(`event.seqNum = ${event.seqNum}`);
               this.seqNum = event.seqNum;
             }
-          }
-          if (this.events.length > 0) {
-            console.log(`events = ${JSON.stringify(this.parseFillEvents())}`);
           }
         },
         'processed' as Commitment,
