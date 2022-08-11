@@ -25,7 +25,6 @@ export class SerumMarket {
   }
 
   async listen(connection: Connection): Promise<void> {
-    console.log(JSON.stringify(this.marketConfig.symbol));
     if (this.market) {
       connection.onAccountChange(
         this.market!.bidsAddress,

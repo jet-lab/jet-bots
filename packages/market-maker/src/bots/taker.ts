@@ -1,14 +1,29 @@
 import { BN } from '@project-serum/anchor';
+import { PublicKey } from '@solana/web3.js';
 
 import { Bot, Context, SerumMarket } from '../';
 
 const PARAMS = {
-  p: 0.1,
+  maxPosition: 1_000,
+  minPosition: 1_000,
+  takeProbability: 0.1,
 };
 
 export class Taker extends Bot {
   constructor(tradingContext: Context, marketDataContext: Context) {
     super(tradingContext, marketDataContext);
+
+    for (const market of Object.values<SerumMarket>(
+      this.tradingContext.markets,
+    )) {
+      if (this.tradingContext.marginAccount) {
+        this.tradingContext.marginAccount.setLimits(
+          new PublicKey(market.marketConfig.baseMint),
+          PARAMS.minPosition,
+          PARAMS.maxPosition,
+        );
+      }
+    }
   }
 
   process(): void {
@@ -17,7 +32,7 @@ export class Taker extends Bot {
       this.tradingContext.markets,
     )) {
       const p = Math.random();
-      if (p < PARAMS.p) {
+      if (p < PARAMS.takeProbability) {
         if (market.bids) {
           const priceLevels = market.bids.getL2(1);
 
@@ -33,7 +48,7 @@ export class Taker extends Bot {
             });
           }
         }
-      } else if (p > 1 - PARAMS.p) {
+      } else if (p > 1 - PARAMS.takeProbability) {
         if (market.asks) {
           const priceLevels = market.asks.getL2(1);
           if (priceLevels.length == 1) {

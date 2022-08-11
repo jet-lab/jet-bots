@@ -53,6 +53,7 @@ export class Context {
         s: { alias: 'symbols', required: true, type: 'string' },
       }).argv;
       this.symbols = this.args.s.split(',');
+      assert(this.symbols);
       this.config = filterConfig(loadConfig(this.args.c), this.symbols);
       this.connection = new Connection(
         this.config.url,
@@ -86,20 +87,6 @@ export class Context {
   async load(
     params: { botFactory?: BotFactory; marketDataContext?: Context } = {},
   ): Promise<void> {
-    if (params.botFactory) {
-      assert(this.args.b);
-      assert(params.marketDataContext);
-      if (params.marketDataContext) {
-        this.bot = params.botFactory!(
-          this.args.b,
-          this,
-          params.marketDataContext,
-        );
-      } else {
-        this.bot = params.botFactory!(this.args.b, this, this);
-      }
-    }
-
     if (this.marginAccount) {
       await this.marginAccount.load();
     }
@@ -123,6 +110,20 @@ export class Context {
       this.connection,
       Object.values<PythOracle>(this.oracles),
     );
+
+    if (params.botFactory) {
+      assert(this.args.b);
+      assert(params.marketDataContext);
+      if (params.marketDataContext) {
+        this.bot = params.botFactory!(
+          this.args.b,
+          this,
+          params.marketDataContext,
+        );
+      } else {
+        this.bot = params.botFactory!(this.args.b, this, this);
+      }
+    }
   }
 }
 
@@ -145,8 +146,7 @@ export abstract class Bot {
 }
 
 function filterConfig(config: any, symbols: string[]) {
-  const filteredConfig = { ...config };
-  filteredConfig.markets = {};
+  const filteredConfig = { ...config, oracles: {}, markets: {} };
   Object.values<any>(config.markets)
     .filter(market => {
       return symbols.includes(market.symbol);
@@ -154,10 +154,11 @@ function filterConfig(config: any, symbols: string[]) {
     .forEach(market => {
       filteredConfig.markets[market.symbol.replace('/', '_')] = market;
     });
-  filteredConfig.oracles = {};
   Object.values<any>(config.oracles)
     .filter(oracle => {
+      //TODO this isn't the best way to do this.
       return (
+        oracle.symbol == 'USDC/USD' ||
         symbols.includes(oracle.symbol + 'C') ||
         symbols.includes(oracle.symbol + 'T')
       );
@@ -165,11 +166,6 @@ function filterConfig(config: any, symbols: string[]) {
     .forEach(oracle => {
       filteredConfig.oracles[oracle.symbol.replace('/', '_')] = oracle;
     });
-  console.log(JSON.stringify(filteredConfig));
-  console.log('');
-  console.log(JSON.stringify(config));
-  console.log('');
-  console.log('');
   return filteredConfig;
 }
 
