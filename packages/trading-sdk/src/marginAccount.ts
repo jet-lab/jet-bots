@@ -10,7 +10,7 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-import { TokenAccount } from './tokenAccount';
+import { Position } from './position';
 
 export class MarginAccount {
   //address: PublicKey;
@@ -20,7 +20,7 @@ export class MarginAccount {
   payer: Account;
 
   payerBalance: number = 0;
-  tokens: Record<string, TokenAccount> = {};
+  positions: Record<string, Position> = {};
 
   constructor(params: {
     //address: PublicKey;
@@ -37,12 +37,11 @@ export class MarginAccount {
   }
 
   //TODO create a margin account if it doesn't exist.
-  //static async create(connection: Connection, owner: Account, payer: Account): Promise<MarginAccount> {
-  //}
+  //static async create(connection: Connection, owner: Account, payer: Account): Promise<MarginAccount> {}
 
   async stop(): Promise<void> {}
 
-  async load(): Promise<void> {
+  async load(config: any): Promise<void> {
     this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
     console.log(
       `Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
@@ -58,12 +57,19 @@ export class MarginAccount {
     );
     for (const item of response.value) {
       const tokenAccount = AccountLayout.decode(Buffer.from(item.account.data));
-      this.tokens[tokenAccount.mint.toBase58()] = {
-        address: item.pubkey,
-        balance: tokenAccount.amount,
-        isNative: Number(tokenAccount.isNative) != 0,
-        mint: tokenAccount.mint,
-      };
+      const tokenConfig = config.tokens.find(tokenConfig => {
+        return tokenConfig.mint == tokenAccount.mint.toBase58();
+      });
+      if (tokenConfig) {
+        this.positions[tokenConfig.symbol] = new Position({
+          balance: tokenAccount.amount,
+          decimals: tokenConfig.decimals,
+          isNative: Number(tokenAccount.isNative) != 0,
+          mint: tokenAccount.mint,
+          symbol: tokenConfig.symbol,
+          tokenAccount: item.pubkey,
+        });
+      }
     }
   }
 
@@ -81,27 +87,35 @@ export class MarginAccount {
       'confirmed' as Commitment,
     );
 
-    for (const token of Object.values<TokenAccount>(this.tokens)) {
+    for (const position of Object.values<Position>(this.positions)) {
       this.connection.onAccountChange(
-        token.address,
+        position.tokenAccount,
         (accountInfo: AccountInfo<Buffer>, context: Context) => {
           const tokenAccount = AccountLayout.decode(
             Buffer.from(accountInfo.data),
           );
-          token.balance = tokenAccount.amount;
+          position.balance = tokenAccount.amount;
         },
         'confirmed' as Commitment,
       );
     }
   }
 
-  async closeMarginAccount(): Promise<void> {}
+  async closeMarginAccount(): Promise<void> {
+    //TODO
+  }
 
-  async borrow(mint: PublicKey, amount: number): Promise<void> {}
+  async borrow(mint: PublicKey, amount: number): Promise<void> {
+    //TODO
+  }
 
-  async deposit(mint: PublicKey, amount: number): Promise<void> {}
+  async deposit(mint: PublicKey, amount: number): Promise<void> {
+    //TODO
+  }
 
-  async repay(mint: PublicKey, amount: number): Promise<void> {}
+  async repay(mint: PublicKey, amount: number): Promise<void> {
+    //TODO
+  }
 
   sendOrders(orders: any[]): void {
     async () => {
@@ -112,16 +126,20 @@ export class MarginAccount {
   }
 
   async setLimits(
-    mint: PublicKey,
+    symbol: string,
     minAmount: number,
     maxAmount: number,
   ): Promise<void> {
-    //TODO
+    assert(minAmount < maxAmount);
+    this.positions[symbol].minAmount = minAmount;
+    this.positions[symbol].maxAmount = maxAmount;
   }
 
   swap(): void {
-    //TODO allow the user to swap tokens.
+    //TODO allow the user to swap tokens. This would be useful in closing out positions or hedging.
   }
 
-  async withdraw(mint: PublicKey, amount: number): Promise<void> {}
+  async withdraw(mint: PublicKey, amount: number): Promise<void> {
+    //TODO
+  }
 }

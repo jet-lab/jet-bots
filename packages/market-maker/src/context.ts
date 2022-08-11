@@ -9,12 +9,14 @@ import assert from 'assert';
 import * as fs from 'fs';
 import yargs from 'yargs/yargs';
 
+//TODO load this from a package.
 import { MarginAccount } from '../../trading-sdk/src/marginAccount';
+
+//TODO load this from a package.
+import CONFIG from '../../trading-sdk/src/config.json';
 
 import { PythOracle } from './pyth';
 import { SerumMarket } from './serum';
-
-import CONFIG from './config.json';
 
 export interface BotFactory {
   (type: string, tradingContext: Context, marketDataContext: Context): Bot;
@@ -88,7 +90,7 @@ export class Context {
     params: { botFactory?: BotFactory; marketDataContext?: Context } = {},
   ): Promise<void> {
     if (this.marginAccount) {
-      await this.marginAccount.load();
+      await this.marginAccount.load(this.config);
     }
 
     for (const marketConfig of Object.values<any>(this.config.markets)) {

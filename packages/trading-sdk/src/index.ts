@@ -1,2 +1,2 @@
 export { MarginAccount } from './marginAccount';
-export { TokenAccount } from './tokenAccount';
+export { Position } from './position';

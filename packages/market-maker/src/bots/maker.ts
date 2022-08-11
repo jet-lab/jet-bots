@@ -27,7 +27,7 @@ export class Maker extends Bot {
     )) {
       if (this.tradingContext.marginAccount) {
         this.tradingContext.marginAccount.setLimits(
-          new PublicKey(market.marketConfig.baseMint),
+          market.marketConfig.symbol,
           PARAMS.minPosition,
           PARAMS.maxPosition,
         );

@@ -1,14 +1,12 @@
 {
-  "name": "@jet-trading/simulation",
+  "name": "@jet-trading/cli",
   "version": "1.0.0",
   "repository": "git@github.com:jet-lab/jet-trading.git",
-  "description": "Initializes a local simulation environment.",
+  "description": "CLI to manage Jet Trading.",
   "license": "MIT",
   "scripts": {
     "clean": "rm -rf lib/",
-    "build": "yarn clean && tsc",
-    "generate": "yarn build && ts-node src/generate.ts",
-    "initialize": "yarn build && ts-node src/initialize.ts"
+    "build": "yarn clean && tsc"
   },
   "dependencies": {
     "@project-serum/anchor": "^0.24.2",
