@@ -65,6 +65,7 @@ export class Context {
         JSON.parse(fs.readFileSync(this.args.k, 'utf-8')),
       );
       this.marginAccount = new MarginAccount({
+        config: this.config,
         connection: this.connection,
         owner: account,
         payer: account,
@@ -90,7 +91,7 @@ export class Context {
     params: { botFactory?: BotFactory; marketDataContext?: Context } = {},
   ): Promise<void> {
     if (this.marginAccount) {
-      await this.marginAccount.load(this.config);
+      await this.marginAccount.load();
     }
 
     for (const marketConfig of Object.values<any>(this.config.markets)) {

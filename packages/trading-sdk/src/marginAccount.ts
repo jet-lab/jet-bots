@@ -14,6 +14,7 @@ import { Position } from './position';
 
 export class MarginAccount {
   //address: PublicKey;
+  config: any;
   connection: Connection;
   //delegate?: Account;
   owner?: Account;
@@ -24,12 +25,14 @@ export class MarginAccount {
 
   constructor(params: {
     //address: PublicKey;
+    config: any;
     connection: Connection;
     //delegate?: Account;
     owner?: Account;
     payer: Account;
   }) {
     //this.address = params.address;
+    this.config = params.config;
     this.connection = params.connection;
     //this.delegate = params.delegate;
     this.owner = params.owner;
@@ -41,13 +44,8 @@ export class MarginAccount {
 
   async stop(): Promise<void> {}
 
-  async load(config: any): Promise<void> {
+  async load(): Promise<void> {
     this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
-    console.log(
-      `Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
-        2,
-      )} SOL`,
-    );
 
     const response = await this.connection.getTokenAccountsByOwner(
       this.owner!.publicKey, //TODO replace account with a trading account, this.address,
@@ -57,9 +55,11 @@ export class MarginAccount {
     );
     for (const item of response.value) {
       const tokenAccount = AccountLayout.decode(Buffer.from(item.account.data));
-      const tokenConfig = config.tokens.find(tokenConfig => {
-        return tokenConfig.mint == tokenAccount.mint.toBase58();
-      });
+      const tokenConfig = Object.values<any>(this.config.tokens).find(
+        tokenConfig => {
+          return tokenConfig.mint == tokenAccount.mint.toBase58();
+        },
+      );
       if (tokenConfig) {
         this.positions[tokenConfig.symbol] = new Position({
           balance: tokenAccount.amount,
