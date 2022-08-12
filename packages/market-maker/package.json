@@ -1,7 +1,7 @@
 {
-  "name": "@jet-trading/market-maker",
+  "name": "@jet-bots/market-maker",
   "version": "1.0.0",
-  "repository": "git@github.com:jet-lab/jet-trading.git",
+  "repository": "git@github.com:jet-lab/jet-bots.git",
   "description": "Example market making bot.",
   "license": "MIT",
   "scripts": {

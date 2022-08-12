@@ -1,8 +1,8 @@
 {
-  "name": "@jet-trading/trading-sdk",
+  "name": "@jet-bots/bot-sdk",
   "version": "1.0.0",
-  "repository": "git@github.com:jet-lab/jet-trading.git",
-  "description": "SDK to support trading.",
+  "repository": "git@github.com:jet-lab/jet-bots.git",
+  "description": "SDK to support Jet bots.",
   "license": "MIT",
   "scripts": {
     "clean": "rm -rf lib/",

@@ -1,8 +1,8 @@
 {
-  "name": "@jet-trading/cli",
+  "name": "@jet-bots/cli",
   "version": "1.0.0",
-  "repository": "git@github.com:jet-lab/jet-trading.git",
-  "description": "CLI to manage Jet Trading.",
+  "repository": "git@github.com:jet-lab/jet-bots.git",
+  "description": "CLI to manage Jet Bots.",
   "license": "MIT",
   "main": "./lib/index.js",
   "scripts": {

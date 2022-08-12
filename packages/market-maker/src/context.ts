@@ -10,10 +10,10 @@ import * as fs from 'fs';
 import yargs from 'yargs/yargs';
 
 //TODO load this from a package.
-import { MarginAccount } from '../../trading-sdk/src/marginAccount';
+import { MarginAccount } from '../../bot-sdk/src/marginAccount';
 
 //TODO load this from a package.
-import CONFIG from '../../trading-sdk/src/config.json';
+import CONFIG from '../../bot-sdk/src/config.json';
 
 import { PythOracle } from './pyth';
 import { SerumMarket } from './serum';

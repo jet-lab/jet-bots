@@ -1,7 +1,7 @@
 {
-  "name": "@jet-trading/simulation",
+  "name": "@jet-bots/simulation",
   "version": "1.0.0",
-  "repository": "git@github.com:jet-lab/jet-trading.git",
+  "repository": "git@github.com:jet-lab/jet-bots.git",
   "description": "Initializes a local simulation environment.",
   "license": "MIT",
   "scripts": {

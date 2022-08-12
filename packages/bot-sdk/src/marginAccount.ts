@@ -48,8 +48,15 @@ export class MarginAccount {
     this.payer = params.payer;
   }
 
-  //TODO create a margin account if it doesn't exist.
-  //static async create(connection: Connection, owner: Account, payer: Account): Promise<MarginAccount> {}
+  static async createMarginAccount(params: {
+    config: any;
+    connection: Connection;
+    owner: Account;
+    payer: Account;
+  }): Promise<MarginAccount> {
+    //TODO
+    throw new Error('Implement.');
+  }
 
   async load(): Promise<void> {
     this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
@@ -168,9 +175,10 @@ export class MarginAccount {
 
   async closeMarginAccount(): Promise<void> {
     //TODO
+    throw new Error('Implement.');
   }
 
-  async deposit(mint: PublicKey, amount: number): Promise<void> {
+  async deposit(symbol: string, amount: number): Promise<void> {
     //TODO
   }
 
@@ -194,7 +202,7 @@ export class MarginAccount {
 
   async stop(): Promise<void> {}
 
-  async withdraw(mint: PublicKey, amount: number): Promise<void> {
+  async withdraw(symbol: string, amount: number): Promise<void> {
     //TODO
   }
 }
