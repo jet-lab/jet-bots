@@ -1,4 +1,10 @@
-import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { BN } from '@project-serum/anchor';
+import {
+  AccountLayout,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import {
   Account,
   AccountInfo,
@@ -7,10 +13,13 @@ import {
   Context,
   LAMPORTS_PER_SOL,
   PublicKey,
+  sendAndConfirmTransaction,
+  Transaction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
 import { Position } from './position';
+import { airdropTokens } from './utils';
 
 export class MarginAccount {
   //address: PublicKey;
@@ -42,8 +51,6 @@ export class MarginAccount {
   //TODO create a margin account if it doesn't exist.
   //static async create(connection: Connection, owner: Account, payer: Account): Promise<MarginAccount> {}
 
-  async stop(): Promise<void> {}
-
   async load(): Promise<void> {
     this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
 
@@ -61,6 +68,7 @@ export class MarginAccount {
         },
       );
       if (tokenConfig) {
+        assert(!this.positions[tokenConfig.symbol]);
         this.positions[tokenConfig.symbol] = new Position({
           balance: tokenAccount.amount,
           decimals: tokenConfig.decimals,
@@ -101,6 +109,63 @@ export class MarginAccount {
     }
   }
 
+  async airdrop(symbol: string, amount: number): Promise<void> {
+    const tokenConfig = Object.values<any>(this.config.tokens).find(
+      tokenConfig => {
+        return tokenConfig.symbol == symbol;
+      },
+    );
+    assert(tokenConfig);
+
+    if (!this.positions[symbol]) {
+      const associatedTokenAddress: PublicKey = await getAssociatedTokenAddress(
+        new PublicKey(tokenConfig.mint),
+        this.owner!.publicKey, //TODO replace this with the margin account.
+      );
+
+      await sendAndConfirmTransaction(
+        this.connection,
+        new Transaction().add(
+          createAssociatedTokenAccountInstruction(
+            this.payer.publicKey,
+            associatedTokenAddress,
+            this.owner!.publicKey, //TODO replace this with the margin account.
+            new PublicKey(tokenConfig.mint),
+          ),
+        ),
+        [this.payer],
+        {
+          commitment: 'confirmed',
+        },
+      );
+
+      this.positions[symbol] = new Position({
+        balance: BigInt(0),
+        decimals: tokenConfig.decimals,
+        isNative: symbol == 'SOL', //TODO this is a hack.
+        mint: new PublicKey(tokenConfig.mint),
+        symbol: tokenConfig.symbol,
+        tokenAccount: associatedTokenAddress,
+      });
+    }
+
+    assert(this.positions[symbol]);
+    const position = this.positions[symbol];
+
+    assert(this.config.splTokenFaucet);
+    assert(tokenConfig.faucet);
+
+    await airdropTokens(
+      this.connection,
+      new PublicKey(this.config.splTokenFaucet),
+      // @ts-ignore
+      this.payer,
+      new PublicKey(tokenConfig.faucet),
+      position.tokenAccount,
+      new BN(amount * 10 ** tokenConfig.decimals),
+    );
+  }
+
   async closeMarginAccount(): Promise<void> {
     //TODO
   }
@@ -126,6 +191,8 @@ export class MarginAccount {
     this.positions[symbol].minAmount = minAmount;
     this.positions[symbol].maxAmount = maxAmount;
   }
+
+  async stop(): Promise<void> {}
 
   async withdraw(mint: PublicKey, amount: number): Promise<void> {
     //TODO

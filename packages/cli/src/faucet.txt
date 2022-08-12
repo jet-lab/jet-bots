@@ -105,69 +105,6 @@ async function fundAccount(
     ),
   ]);
 
-  const transaction = new Transaction();
-  if ((await connection.getParsedAccountInfo(baseTokenAccount)).value == null) {
-    transaction.add(
-      createAssociatedTokenAccountInstruction(
-        payer.publicKey,
-        baseTokenAccount,
-        payer.publicKey,
-        new PublicKey(baseToken.mint),
-      ),
-    );
-  }
-  if (
-    (await connection.getParsedAccountInfo(quoteTokenAccount)).value == null
-  ) {
-    transaction.add(
-      createAssociatedTokenAccountInstruction(
-        payer.publicKey,
-        quoteTokenAccount,
-        payer.publicKey,
-        new PublicKey(quoteToken.mint),
-      ),
-    );
-  }
-  if (transaction.instructions.length > 0) {
-    await sendAndConfirmTransaction(connection, transaction, [payer], {
-      commitment: 'confirmed',
-    });
-  }
-
-  if (baseToken.faucet && quoteToken.faucet) {
-    await Promise.all([
-      await airdropTokens(
-        connection,
-        splTokenFaucet,
-        payer,
-        new PublicKey(baseToken.faucet),
-        baseTokenAccount,
-        new BN(baseAmount).mul(new BN(10 ** baseToken.decimals)),
-      ),
-      await airdropTokens(
-        connection,
-        splTokenFaucet,
-        payer,
-        new PublicKey(quoteToken.faucet),
-        quoteTokenAccount,
-        new BN(quoteAmount).mul(new BN(10 ** quoteToken.decimals)),
-      ),
-    ]);
-  }
-
-  balance = (await connection.getBalance(payer.publicKey)) / LAMPORTS_PER_SOL;
-  const baseBalance = (
-    await connection.getTokenAccountBalance(baseTokenAccount)
-  ).value.uiAmount;
-  const quoteBalance = (
-    await connection.getTokenAccountBalance(quoteTokenAccount)
-  ).value.uiAmount;
-
-  console.log(`Account: ${account.publicKey.toBase58()}`);
-  console.log(`  balance = ${JSON.stringify(balance)} SOL`);
-  console.log(`  baseBalance = ${baseBalance} ${baseToken.symbol}`);
-  console.log(`  quoteBalance = ${quoteBalance} ${quoteToken.symbol}`);
-  console.log('');
 }
 
 async function fundFeeDiscountAccount(

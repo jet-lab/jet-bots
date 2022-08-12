@@ -37,13 +37,29 @@ async function loadMarginAccount(argv: any): Promise<MarginAccount> {
 }
 
 async function run() {
-  //TODO if you don't pass in args then show help.
+  //TODO if you don't pass in args then show usage.
 
   const command = process.argv.slice(2, 3)[0];
 
   console.log(`jet ${command}`);
 
   switch (command) {
+    case 'airdrop': {
+      const argv = await yargs(process.argv.slice(3)).options({
+        a: { alias: 'amount', required: true, type: 'number' },
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+        s: { alias: 'symbol', required: true, type: 'string' },
+      }).argv;
+
+      const marginAccount = await loadMarginAccount(argv);
+
+      await marginAccount.airdrop(argv.s, argv.a);
+
+      //TODO print out the transaction.
+
+      break;
+    }
     case 'balance': {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
@@ -116,6 +132,10 @@ async function run() {
 
       //TODO withdraw funds from a margin account.
 
+      break;
+    }
+    default: {
+      //TODO show usage.
       break;
     }
   }

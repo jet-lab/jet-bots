@@ -14,6 +14,10 @@ import {
 } from '@project-serum/serum/lib/market';
 import { decodeEventQueue, Event } from '@project-serum/serum/lib/queue';
 
+  Cluster,
+  sendAndConfirmTransaction,
+  Transaction,
+  TransactionInstruction,
 
 
 //import { findOpenOrdersAccounts, getAssociatedTokenAddress } from './utils';
