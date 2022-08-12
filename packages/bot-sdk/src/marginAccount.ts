@@ -173,8 +173,30 @@ export class MarginAccount {
     );
   }
 
+  cancelOrders(): void {
+    //TODO for every position cancel the orders.
+
+    /*
+  async cancelOpenOrders() {
+    for (const market of Object.values<Market>(this.context.markets)) {
+      const openOrders = await market.loadOrdersForOwner(
+        this.context.connection,
+        this.context.account!.publicKey,
+      );
+      for (const openOrder of openOrders) {
+        await market.cancelOrder(this.context.connection, this.context.account!, openOrder);
+      }
+    }
+  }
+    */
+
+    throw new Error('Implement.');
+  }
+
   async closeMarginAccount(): Promise<void> {
     //TODO
+    //await this.closeOpenOrdersAccounts();
+
     throw new Error('Implement.');
   }
 
@@ -182,10 +204,41 @@ export class MarginAccount {
     //TODO
   }
 
+  fetchOpenOrders(symbol: string): any[] {
+    throw new Error('Implement.');
+  }
+
   sendOrders(orders: any[]): void {
     async () => {
       try {
         //TODO send the orders.
+        //owner: this.account,
+        //payer: this.context.positions[symbol].quoteTokenAccount,
+        //clientId: undefined,
+        //openOrdersAddressKey: this.context.positions[symbol].openOrdersAccount,
+        //feeDiscountPubkey: this.feeDiscountPubkey,
+        /*
+        export interface OrderParamsBase<T = Account> {
+            side: 'buy' | 'sell';
+            price: number;
+            size: number;
+            orderType?: 'limit' | 'ioc' | 'postOnly';
+            clientId?: BN;
+            selfTradeBehavior?: 'decrementTake' | 'cancelProvide' | 'abortTransaction' | undefined;
+            maxTs?: number | null;
+        }
+        export interface OrderParamsAccounts<T = Account> {
+            owner: T;
+            payer: PublicKey;
+            openOrdersAddressKey?: PublicKey;
+            openOrdersAccount?: Account;
+            feeDiscountPubkey?: PublicKey | null;
+            programId?: PublicKey;
+        }
+        export interface OrderParams<T = Account> extends OrderParamsBase<T>, OrderParamsAccounts<T> {
+            replaceIfExists?: boolean;
+        }
+        */
       } catch (err) {}
     };
   }
@@ -199,8 +252,6 @@ export class MarginAccount {
     this.positions[symbol].minAmount = minAmount;
     this.positions[symbol].maxAmount = maxAmount;
   }
-
-  async stop(): Promise<void> {}
 
   async withdraw(symbol: string, amount: number): Promise<void> {
     //TODO

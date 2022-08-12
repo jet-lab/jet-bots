@@ -21,7 +21,7 @@ class Controller {
       await sleep(this.interval);
 
       if (context.marginAccount) {
-        await context.marginAccount.stop();
+        await context.marginAccount.cancelOrders();
       }
 
       console.log(`MARKET MAKER EXITED`);
