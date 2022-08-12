@@ -105,15 +105,7 @@ export class MarginAccount {
     //TODO
   }
 
-  async borrow(mint: PublicKey, amount: number): Promise<void> {
-    //TODO
-  }
-
   async deposit(mint: PublicKey, amount: number): Promise<void> {
-    //TODO
-  }
-
-  async repay(mint: PublicKey, amount: number): Promise<void> {
     //TODO
   }
 
@@ -133,10 +125,6 @@ export class MarginAccount {
     assert(minAmount < maxAmount);
     this.positions[symbol].minAmount = minAmount;
     this.positions[symbol].maxAmount = maxAmount;
-  }
-
-  swap(): void {
-    //TODO allow the user to swap tokens. This would be useful in closing out positions or hedging.
   }
 
   async withdraw(mint: PublicKey, amount: number): Promise<void> {

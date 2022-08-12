@@ -17,6 +17,25 @@ import { MarginAccount, Position } from '../../trading-sdk/src/';
 //TODO load this from a package.
 import CONFIG from '../../trading-sdk/src/config.json';
 
+async function loadMarginAccount(argv: any): Promise<MarginAccount> {
+  const config = loadConfig(argv.c);
+
+  const connection = new Connection(config.url, 'processed' as Commitment);
+
+  const account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
+
+  const marginAccount = new MarginAccount({
+    config,
+    connection,
+    owner: account,
+    payer: account,
+  });
+
+  await marginAccount.load();
+
+  return marginAccount;
+}
+
 async function run() {
   //TODO if you don't pass in args then show help.
 
@@ -31,20 +50,7 @@ async function run() {
         k: { alias: 'keyfile', required: true, type: 'string' },
       }).argv;
 
-      const config = loadConfig(argv.c);
-
-      const connection = new Connection(config.url, 'processed' as Commitment);
-
-      const account = new Account(JSON.parse(fs.readFileSync(argv.k, 'utf-8')));
-
-      const marginAccount = new MarginAccount({
-        config,
-        connection,
-        owner: account,
-        payer: account,
-      });
-
-      await marginAccount.load();
+      const marginAccount = await loadMarginAccount(argv);
 
       console.log('');
       console.log(
@@ -64,8 +70,51 @@ async function run() {
 
       break;
     }
+    case 'close': {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+
+      const marginAccount = await loadMarginAccount(argv);
+
+      //TODO close a margin account.
+
+      break;
+    }
     case 'create': {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+
+      const marginAccount = await loadMarginAccount(argv);
+
       //TODO create a margin account.
+
+      break;
+    }
+    case 'deposit': {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+
+      const marginAccount = await loadMarginAccount(argv);
+
+      //TODO deposit funds into a margin account.
+
+      break;
+    }
+    case 'withdraw': {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+
+      const marginAccount = await loadMarginAccount(argv);
+
+      //TODO withdraw funds from a margin account.
 
       break;
     }
