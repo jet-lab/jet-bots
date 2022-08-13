@@ -105,12 +105,9 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
-        s: { alias: 'symbol', required: true, type: 'string' },
       }).argv;
 
       const marginAccount = await loadMarginAccount(argv);
-
-      const openOrders = await marginAccount.fetchOpenOrders(argv.s);
 
       marginAccount.printOpenOrders();
 

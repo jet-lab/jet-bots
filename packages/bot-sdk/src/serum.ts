@@ -1,8 +1,9 @@
 import { BN } from '@project-serum/anchor';
-import { Market } from '@project-serum/serum';
+import { DexInstructions, Market, OpenOrders } from '@project-serum/serum';
 import { OrderParams } from '@project-serum/serum/lib/market';
 import {
   Account,
+  AccountInfo,
   Connection,
   PublicKey,
   sendAndConfirmTransaction,
@@ -11,24 +12,12 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-export async function getOrCreateOpenOrdersAccount(
+async function createOpenOrdersAccount(
   connection: Connection,
   marketAddress: PublicKey,
   owner: Account,
   serumProgramId: PublicKey,
 ): Promise<PublicKey> {
-  /*
-  const openOrdersAccounts = await findOpenOrdersAccounts(
-    connection,
-    marketAddress,
-    owner.publicKey,
-    serumProgramId,
-  );
-
-  if (openOrdersAccounts.length > 0) {
-    return openOrdersAccounts[0];
-  }
-
   const openOrdersAccount = new Account();
 
   const transaction = new Transaction().add(
@@ -56,12 +45,51 @@ export async function getOrCreateOpenOrdersAccount(
   );
 
   return openOrdersAccount.publicKey;
-  */
-  throw new Error('Implement');
+}
+
+export async function findOpenOrdersAccountsForOwner(
+  connection: Connection,
+  owner: PublicKey,
+  programId: PublicKey,
+): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+  const filters = [
+    {
+      memcmp: {
+        offset: OpenOrders.getLayout(programId).offsetOf('owner'),
+        bytes: owner.toBase58(),
+      },
+    },
+    {
+      dataSize: OpenOrders.getLayout(programId).span,
+    },
+  ];
+  // @ts-ignore
+  const resp = await connection._rpcRequest('getProgramAccounts', [
+    programId.toBase58(),
+    {
+      commitment: connection.commitment,
+      filters,
+      encoding: 'base64',
+    },
+  ]);
+  if (resp.error) {
+    throw new Error(resp.error.message);
+  }
+  return resp.result.map(
+    ({ pubkey, account: { data, executable, owner, lamports } }) => ({
+      publicKey: new PublicKey(pubkey),
+      accountInfo: {
+        data: Buffer.from(data[0], 'base64'),
+        executable,
+        owner: new PublicKey(owner),
+        lamports,
+      },
+    }),
+  );
 }
 
 /*
-export async closeOpenOrdersAccounts() {
+async closeOpenOrdersAccounts() {
   console.log(
     `closeOpenOrdersAccounts ${this.context.marginAccount!.owner.publicKey}`,
   );

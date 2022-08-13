@@ -1,4 +1,5 @@
 import { BN } from '@project-serum/anchor';
+import { OpenOrders } from '@project-serum/serum';
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   Account,
@@ -8,12 +9,11 @@ import {
   Context,
   LAMPORTS_PER_SOL,
   PublicKey,
-  sendAndConfirmTransaction,
-  Transaction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
 import { Position } from './position';
+import { findOpenOrdersAccountsForOwner } from './serum';
 import { airdropTokens } from './utils';
 
 export class MarginAccount {
@@ -81,6 +81,28 @@ export class MarginAccount {
         });
       }
     }
+
+    const serumProgramId = new PublicKey(this.config.serumProgramId);
+
+    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+      this.connection,
+      this.owner!.publicKey,
+      serumProgramId,
+    );
+
+    for (const openOrdersAccount of openOrdersAccounts) {
+      console.log(
+        `openOrdersAccount.publicKey = ${openOrdersAccount.publicKey}`,
+      );
+
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
+        serumProgramId,
+      );
+
+      //TODO set this on the token account.
+    }
   }
 
   async listen(): Promise<void> {
@@ -104,6 +126,17 @@ export class MarginAccount {
         'confirmed' as Commitment,
       );
     }
+
+    //TODO subscribe to open orders.
+
+    /*
+if (
+  openOrders.baseTokenFree.gt(new BN(0)) ||
+  openOrders.quoteTokenFree.gt(new BN(0))
+) {
+  await context.bots[i].positions[symbol].settleFunds();
+}
+*/
   }
 
   async airdrop(symbol: string, amount: number): Promise<void> {
@@ -169,10 +202,6 @@ export class MarginAccount {
     //TODO
   }
 
-  fetchOpenOrders(symbol: string): any[] {
-    throw new Error('Implement.');
-  }
-
   printBalance(): void {
     console.log('');
     console.log(
@@ -191,13 +220,18 @@ export class MarginAccount {
     console.log('');
   }
 
-  printOpenOrders(): void {}
+  printOpenOrders(): void {
+    throw new Error('Implement.');
+  }
 
   sendOrders(orders: any[]): void {
     async () => {
       try {
         console.log(JSON.stringify(orders));
         console.log('');
+
+        //TODO if open orders account is null, create one and subscribe to events.
+        //createOpenOrdersAccount
 
         //TODO replace existing orders.
         //replaceOrdersByClientIds
