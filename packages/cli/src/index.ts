@@ -49,21 +49,7 @@ async function run() {
 
       const marginAccount = await loadMarginAccount(argv);
 
-      console.log('');
-      console.log(
-        `Payer balance = ${(
-          marginAccount.payerBalance / LAMPORTS_PER_SOL
-        ).toFixed(2)} SOL`,
-      );
-      for (const position of Object.values<Position>(marginAccount.positions)) {
-        console.log(
-          `  ${position.symbol} token balance = ${(
-            Number(position.balance) /
-            10 ** position.decimals
-          ).toFixed(2)}`,
-        );
-      }
-      console.log('');
+      marginAccount.printBalance();
 
       break;
     }
@@ -126,7 +112,7 @@ async function run() {
 
       const openOrders = await marginAccount.fetchOpenOrders(argv.s);
 
-      //TODO print out the open orders.
+      marginAccount.printOpenOrders();
 
       break;
     }

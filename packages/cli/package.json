@@ -7,8 +7,7 @@
   "main": "./lib/index.js",
   "scripts": {
     "clean": "rm -rf lib/",
-    "build": "yarn clean && tsc",
-    "start": "ts-node src/index.ts"
+    "build": "yarn clean && tsc"
   },
   "dependencies": {
     "@project-serum/anchor": "^0.24.2",

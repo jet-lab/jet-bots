@@ -1,10 +1,5 @@
 import { BN } from '@project-serum/anchor';
-import {
-  AccountLayout,
-  createAssociatedTokenAccountInstruction,
-  getAssociatedTokenAddress,
-  TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   Account,
   AccountInfo,
@@ -93,11 +88,6 @@ export class MarginAccount {
       this.payer.publicKey,
       (accountInfo: AccountInfo<Buffer>, context: Context) => {
         this.payerBalance = accountInfo.lamports;
-        console.log(
-          `Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
-            2,
-          )} SOL`,
-        );
       },
       'confirmed' as Commitment,
     );
@@ -125,35 +115,12 @@ export class MarginAccount {
     assert(tokenConfig);
 
     if (!this.positions[symbol]) {
-      const associatedTokenAddress: PublicKey = await getAssociatedTokenAddress(
-        new PublicKey(tokenConfig.mint),
-        this.owner!.publicKey, //TODO replace this with the margin account.
-      );
-
-      await sendAndConfirmTransaction(
+      this.positions[symbol] = await Position.create(
         this.connection,
-        new Transaction().add(
-          createAssociatedTokenAccountInstruction(
-            this.payer.publicKey,
-            associatedTokenAddress,
-            this.owner!.publicKey, //TODO replace this with the margin account.
-            new PublicKey(tokenConfig.mint),
-          ),
-        ),
-        [this.payer],
-        {
-          commitment: 'confirmed',
-        },
+        this.owner!.publicKey,
+        this.payer,
+        tokenConfig,
       );
-
-      this.positions[symbol] = new Position({
-        balance: BigInt(0),
-        decimals: tokenConfig.decimals,
-        isNative: symbol == 'SOL', //TODO this is a hack.
-        mint: new PublicKey(tokenConfig.mint),
-        symbol: tokenConfig.symbol,
-        tokenAccount: associatedTokenAddress,
-      });
     }
 
     assert(this.positions[symbol]);
@@ -175,7 +142,6 @@ export class MarginAccount {
 
   cancelOrders(): void {
     //TODO for every position cancel the orders.
-
     /*
   async cancelOpenOrders() {
     for (const market of Object.values<Market>(this.context.markets)) {
@@ -189,8 +155,7 @@ export class MarginAccount {
     }
   }
     */
-
-    throw new Error('Implement.');
+    //throw new Error('Implement.');
   }
 
   async closeMarginAccount(): Promise<void> {
@@ -208,9 +173,35 @@ export class MarginAccount {
     throw new Error('Implement.');
   }
 
+  printBalance(): void {
+    console.log('');
+    console.log(
+      `Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
+        2,
+      )} SOL`,
+    );
+    for (const position of Object.values<Position>(this.positions)) {
+      console.log(
+        `  ${position.symbol} token balance = ${(
+          Number(position.balance) /
+          10 ** position.decimals
+        ).toFixed(2)}`,
+      );
+    }
+    console.log('');
+  }
+
+  printOpenOrders(): void {}
+
   sendOrders(orders: any[]): void {
     async () => {
       try {
+        console.log(JSON.stringify(orders));
+        console.log('');
+
+        //TODO replace existing orders.
+        //replaceOrdersByClientIds
+
         //TODO send the orders.
         //owner: this.account,
         //payer: this.context.positions[symbol].quoteTokenAccount,
@@ -248,9 +239,30 @@ export class MarginAccount {
     minAmount: number,
     maxAmount: number,
   ): Promise<void> {
-    assert(minAmount < maxAmount);
-    this.positions[symbol].minAmount = minAmount;
-    this.positions[symbol].maxAmount = maxAmount;
+    //console.log(`minAmount = ${minAmount}`);
+    //console.log(`maxAmount = ${maxAmount}`);
+    assert(minAmount <= maxAmount);
+
+    let position = this.positions[symbol];
+    if (!position) {
+      const tokenConfig = Object.values<any>(this.config.tokens).find(
+        tokenConfig => {
+          return tokenConfig.symbol == symbol;
+        },
+      );
+      position = await Position.create(
+        this.connection,
+        this.owner!.publicKey,
+        this.payer,
+        tokenConfig,
+      );
+      this.positions[symbol] = position;
+    }
+
+    position.minAmount = minAmount;
+    position.maxAmount = maxAmount;
+
+    //TODO write this to the user's margin account settings.
   }
 
   async withdraw(symbol: string, amount: number): Promise<void> {

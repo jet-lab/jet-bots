@@ -115,6 +115,8 @@ export class Context {
     );
 
     if (params.botFactory) {
+      this.marginAccount!.printBalance();
+
       assert(this.args.b);
       assert(params.marketDataContext);
       if (params.marketDataContext) {

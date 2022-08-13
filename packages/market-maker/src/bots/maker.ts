@@ -4,7 +4,7 @@ import { Bot, Context, SerumMarket } from '../';
 
 const PARAMS = {
   maxPosition: 1_000,
-  minPosition: 1_000,
+  minPosition: -1_000,
   orderSize: 100,
   repriceBPS: 5,
   spreadBPS: 20,
@@ -27,7 +27,7 @@ export class Maker extends Bot {
     )) {
       if (this.tradingContext.marginAccount) {
         this.tradingContext.marginAccount.setLimits(
-          market.marketConfig.symbol,
+          market.marketConfig.baseSymbol,
           PARAMS.minPosition,
           PARAMS.maxPosition,
         );

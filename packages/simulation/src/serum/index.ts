@@ -343,7 +343,7 @@ function toPriceLevels(
     }
   }
   return levels
-    .slice(0, 7)
+    .slice(0, depth)
     .map(([priceLots, sizeLots]) => [
       priceLotsToNumber(
         priceLots,
