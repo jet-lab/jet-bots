@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import yargs from 'yargs/yargs';
 
 //TODO load this from a package.
-import { MarginAccount, SpotOrder } from '../../bot-sdk/src/';
+import { MarginAccount, Order } from '../../bot-sdk/src/';
 
 //TODO load this from a package.
 import CONFIG from '../../bot-sdk/src/config.json';
@@ -143,7 +143,7 @@ export abstract class Bot {
 
   abstract process(): void;
 
-  sendOrders(orders: SpotOrder[]): void {
+  sendOrders(orders: Order[]): void {
     if (this.tradingContext.marginAccount) {
       this.tradingContext.marginAccount.sendOrders(orders);
     }

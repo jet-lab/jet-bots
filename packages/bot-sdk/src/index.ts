@@ -1,3 +1,3 @@
 export { MarginAccount } from './marginAccount';
-export { SpotOrder } from './orders';
+export { Order } from './market';
 export { Position } from './position';

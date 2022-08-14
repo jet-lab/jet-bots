@@ -2,7 +2,7 @@ import { BN } from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
 
 //TODO load this from a package.
-import { SpotOrder } from '../../../bot-sdk/src/';
+import { Order } from '../../../bot-sdk/src/';
 
 import { Bot, Context, SerumMarket } from '../';
 
@@ -30,8 +30,7 @@ export class Taker extends Bot {
   }
 
   process(): void {
-    console.log(``);
-    const orders: SpotOrder[] = [];
+    const orders: Order[] = [];
     for (const market of Object.values<SerumMarket>(
       this.tradingContext.markets,
     )) {
@@ -43,8 +42,7 @@ export class Taker extends Bot {
             const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
               priceLevels[0];
             orders.push({
-              marketConfig: market.marketConfig,
-              market: market.market!,
+              symbol: market.marketConfig.symbol,
               side: 'sell',
               price,
               size,
@@ -60,8 +58,7 @@ export class Taker extends Bot {
             const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
               priceLevels[0];
             orders.push({
-              marketConfig: market.marketConfig,
-              market: market.market!,
+              symbol: market.marketConfig.symbol,
               side: 'buy',
               price,
               size,

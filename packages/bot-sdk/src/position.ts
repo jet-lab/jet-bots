@@ -15,7 +15,6 @@ export class Position {
   decimals: number;
   isNative: boolean;
   mint: PublicKey;
-  openOrdersAccount?: PublicKey;
   symbol: string;
   tokenAccount: PublicKey;
 
@@ -28,7 +27,6 @@ export class Position {
     decimals: number;
     isNative: boolean;
     mint: PublicKey;
-    openOrdersAccount?: PublicKey;
     symbol: string;
     tokenAccount: PublicKey;
   }) {
@@ -36,7 +34,6 @@ export class Position {
     this.decimals = params.decimals;
     this.isNative = params.isNative;
     this.mint = params.mint;
-    this.openOrdersAccount = params.openOrdersAccount;
     this.symbol = params.symbol;
     this.tokenAccount = params.tokenAccount;
   }

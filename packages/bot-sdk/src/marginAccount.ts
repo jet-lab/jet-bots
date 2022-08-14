@@ -1,5 +1,9 @@
 import { BN } from '@project-serum/anchor';
-import { DexInstructions, Market, OpenOrders } from '@project-serum/serum';
+import {
+  DexInstructions,
+  Market as SerumMarket,
+  OpenOrders,
+} from '@project-serum/serum';
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   Account,
@@ -7,16 +11,17 @@ import {
   Commitment,
   Connection,
   Context,
+  Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
   sendAndConfirmTransaction,
   Transaction,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
-import { SpotOrder } from './orders';
+import { Market, Order } from './market';
 import { Position } from './position';
-import { airdropTokens } from './utils';
 
 export class MarginAccount {
   //address: PublicKey;
@@ -26,6 +31,8 @@ export class MarginAccount {
   owner?: Account;
   payer: Account;
 
+  listening: boolean = false;
+  markets: Record<string, Market> = {};
   payerBalance: number = 0;
   positions: Record<string, Position> = {};
 
@@ -84,31 +91,22 @@ export class MarginAccount {
       }
     }
 
-    const serumProgramId = new PublicKey(this.config.serumProgramId);
-
-    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+    for (const marketConfig of Object.values<any>(this.config.markets)) {
+      const market = new Market(marketConfig);
+      this.markets[marketConfig.symbol] = market;
+    }
+    assert(this.config.serumProgramId);
+    await Market.load(
       this.connection,
       this.owner!.publicKey,
-      serumProgramId,
+      new PublicKey(this.config.serumProgramId),
+      Object.values<Market>(this.markets),
     );
-
-    for (const openOrdersAccount of openOrdersAccounts) {
-      console.log(
-        `openOrdersAccount.publicKey = ${openOrdersAccount.publicKey}`,
-      );
-
-      const openOrders = OpenOrders.fromAccountInfo(
-        openOrdersAccount.publicKey,
-        openOrdersAccount.accountInfo,
-        serumProgramId,
-      );
-
-      assert(false);
-      //TODO set this on the token account.
-    }
   }
 
   async listen(): Promise<void> {
+    this.listening = true;
+
     this.connection.onAccountChange(
       this.payer.publicKey,
       (accountInfo: AccountInfo<Buffer>, context: Context) => {
@@ -130,16 +128,9 @@ export class MarginAccount {
       );
     }
 
-    //TODO listen to open orders.
-
-    /*
-if (
-  openOrders.baseTokenFree.gt(new BN(0)) ||
-  openOrders.quoteTokenFree.gt(new BN(0))
-) {
-  await context.bots[i].positions[symbol].settleFunds();
-}
-*/
+    for (const market of Object.values<Market>(this.markets)) {
+      market.listenOpenOrders(this.connection);
+    }
   }
 
   async airdrop(symbol: string, amount: number): Promise<void> {
@@ -157,6 +148,8 @@ if (
         this.payer,
         tokenConfig,
       );
+
+      //TODO listen
     }
 
     assert(this.positions[symbol]);
@@ -287,6 +280,14 @@ if (
     */
   }
 
+  async createOpenOrders(): Promise<void> {
+    for (const market of Object.values<Market>(this.markets)) {
+      if (!market.openOrders) {
+        await market.createOpenOrders(this.connection, this.owner!);
+      }
+    }
+  }
+
   async deposit(symbol: string, amount: number): Promise<void> {
     //TODO
   }
@@ -310,71 +311,78 @@ if (
   }
 
   printOpenOrders(): void {
-    throw new Error('Implement.');
+    for (const market of Object.values<Market>(this.markets)) {
+      console.log(market.marketConfig.symbol);
+      if (market.openOrders) {
+        console.log(`  ${market.openOrders.address}`);
+        //TODO list any orders in the open orders account.
+      }
+      console.log('');
+    }
   }
 
-  sendOrders(orders: SpotOrder[]): void {
+  sendOrders(orders: Order[]): void {
     (async () => {
       try {
         const transaction = new Transaction();
 
         for (const order of orders) {
-          const position = this.positions[order.marketConfig.symbol];
+          const market = this.markets[order.symbol];
+          if (market) {
+            if (!market.openOrders) {
+              await market.createOpenOrders(this.connection, this.owner!);
+              await market.listenOpenOrders(this.connection);
+            }
 
-          if (!position.openOrdersAccount) {
-            position.openOrdersAccount = await createOpenOrdersAccount(
-              this.connection,
-              order.market.address,
-              this.owner!,
-              order.market.programId,
-            );
-            //TODO listen to open orders.
-          }
+            if (
+              market.market!.baseSizeNumberToLots(order.size).lte(new BN(0))
+            ) {
+              console.log(`size = ${order.size}`);
+              console.log(
+                `market.baseSizeNumberToLots(size) = ${market.market!.baseSizeNumberToLots(
+                  order.size,
+                )}`,
+              );
+              console.log('size too small');
+            } else if (
+              market.market!.priceNumberToLots(order.price).lte(new BN(0))
+            ) {
+              console.log(`price = ${order.price}`);
+              console.log(
+                `market.priceNumberToLots(price) = ${market.market!.priceNumberToLots(
+                  order.price,
+                )}`,
+              );
+              console.log('invalid price');
+            } else {
+              //TODO replace existing orders.
+              //replaceOrdersByClientIds
 
-          if (order.market.baseSizeNumberToLots(order.size).lte(new BN(0))) {
-            console.log(`size = ${order.size}`);
-            console.log(
-              `market.baseSizeNumberToLots(size) = ${order.market.baseSizeNumberToLots(
-                order.size,
-              )}`,
-            );
-            console.log('size too small');
-          } else if (
-            order.market.priceNumberToLots(order.price).lte(new BN(0))
-          ) {
-            console.log(`price = ${order.price}`);
-            console.log(
-              `market.priceNumberToLots(price) = ${order.market.priceNumberToLots(
-                order.price,
-              )}`,
-            );
-            console.log('invalid price');
+              //TODO send the orders.
+              //owner: this.account,
+              //payer: this.context.positions[symbol].quoteTokenAccount,
+              //clientId: undefined,
+              //openOrdersAddressKey: this.context.positions[symbol].openOrdersAccount,
+              //feeDiscountPubkey: this.feeDiscountPubkey,
+
+              market.market!.makeNewOrderV3Instruction({
+                owner: this.owner!,
+                // @ts-ignore
+                payer: this.payer,
+                side: order.side,
+                price: order.price,
+                size: order.size,
+                orderType: order.orderType,
+                clientId: new BN(Date.now()),
+                //openOrdersAddressKey,
+                //openOrdersAccount,
+                //feeDiscountPubkey,
+                //maxTs,
+                //replaceIfExists,
+              });
+            }
           } else {
-            //TODO replace existing orders.
-            //replaceOrdersByClientIds
-
-            //TODO send the orders.
-            //owner: this.account,
-            //payer: this.context.positions[symbol].quoteTokenAccount,
-            //clientId: undefined,
-            //openOrdersAddressKey: this.context.positions[symbol].openOrdersAccount,
-            //feeDiscountPubkey: this.feeDiscountPubkey,
-
-            order.market.makeNewOrderV3Instruction({
-              owner: this.owner!,
-              // @ts-ignore
-              payer: this.payer,
-              side: order.side,
-              price: order.price,
-              size: order.size,
-              orderType: order.orderType,
-              clientId: new BN(Date.now()),
-              //openOrdersAddressKey,
-              //openOrdersAccount,
-              //feeDiscountPubkey,
-              //maxTs,
-              //replaceIfExists,
-            });
+            console.log(`Unknown market: ${order.symbol}`);
           }
         }
 
@@ -421,7 +429,7 @@ if (
     position.minAmount = minAmount;
     position.maxAmount = maxAmount;
 
-    //TODO write this to the user's margin account settings.
+    //TODO write this to the user's margin account settings on-chain.
   }
 
   async withdraw(symbol: string, amount: number): Promise<void> {
@@ -429,78 +437,62 @@ if (
   }
 }
 
-async function createOpenOrdersAccount(
+const airdropTokens = async (
   connection: Connection,
-  marketAddress: PublicKey,
-  owner: Account,
-  serumProgramId: PublicKey,
-): Promise<PublicKey> {
-  const openOrdersAccount = new Account();
-
-  const transaction = new Transaction().add(
-    await OpenOrders.makeCreateAccountTransaction(
-      connection,
-      marketAddress,
-      owner.publicKey,
-      openOrdersAccount.publicKey,
-      serumProgramId,
-    ),
-    DexInstructions.initOpenOrders({
-      market: marketAddress,
-      openOrders: openOrdersAccount.publicKey,
-      owner: owner.publicKey,
-      programId: serumProgramId,
-      marketAuthority: undefined,
-    }),
+  faucetProgramId: PublicKey,
+  feePayerAccount: Keypair,
+  faucetAddress: PublicKey,
+  tokenDestinationAddress: PublicKey,
+  amount: BN,
+) => {
+  const pubkeyNonce = await PublicKey.findProgramAddress(
+    [Buffer.from('faucet')],
+    faucetProgramId,
   );
 
-  await sendAndConfirmTransaction(
-    connection,
-    transaction,
-    [owner, openOrdersAccount],
-    { commitment: 'confirmed' },
-  );
-
-  return openOrdersAccount.publicKey;
-}
-
-async function findOpenOrdersAccountsForOwner(
-  connection: Connection,
-  owner: PublicKey,
-  programId: PublicKey,
-): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
-  const filters = [
+  const keys = [
+    { pubkey: pubkeyNonce[0], isSigner: false, isWritable: false },
     {
-      memcmp: {
-        offset: OpenOrders.getLayout(programId).offsetOf('owner'),
-        bytes: owner.toBase58(),
-      },
+      pubkey: await getMintPubkeyFromTokenAccountPubkey(
+        connection,
+        tokenDestinationAddress,
+      ),
+      isSigner: false,
+      isWritable: true,
     },
-    {
-      dataSize: OpenOrders.getLayout(programId).span,
-    },
+    { pubkey: tokenDestinationAddress, isSigner: false, isWritable: true },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: faucetAddress, isSigner: false, isWritable: false },
   ];
-  // @ts-ignore
-  const resp = await connection._rpcRequest('getProgramAccounts', [
-    programId.toBase58(),
-    {
-      commitment: connection.commitment,
-      filters,
-      encoding: 'base64',
-    },
-  ]);
-  if (resp.error) {
-    throw new Error(resp.error.message);
-  }
-  return resp.result.map(
-    ({ pubkey, account: { data, executable, owner, lamports } }) => ({
-      publicKey: new PublicKey(pubkey),
-      accountInfo: {
-        data: Buffer.from(data[0], 'base64'),
-        executable,
-        owner: new PublicKey(owner),
-        lamports,
-      },
+
+  const tx = new Transaction().add(
+    new TransactionInstruction({
+      programId: faucetProgramId,
+      data: Buffer.from([1, ...amount.toArray('le', 8)]),
+      keys,
     }),
   );
-}
+  await sendAndConfirmTransaction(connection, tx, [feePayerAccount], {
+    skipPreflight: false,
+    commitment: 'singleGossip',
+  });
+};
+
+const getMintPubkeyFromTokenAccountPubkey = async (
+  connection: Connection,
+  tokenAccountPubkey: PublicKey,
+) => {
+  try {
+    const tokenMintData = (
+      await connection.getParsedAccountInfo(tokenAccountPubkey, 'singleGossip')
+    ).value!.data;
+    //@ts-expect-error (doing the data parsing into steps so this ignore line is not moved around by formatting)
+    const tokenMintAddress = tokenMintData.parsed.info.mint;
+
+    return new PublicKey(tokenMintAddress);
+  } catch (err) {
+    throw new Error(
+      'Error calculating mint address from token account. Are you sure you inserted a valid token account address',
+    );
+  }
+};
