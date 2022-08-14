@@ -1,5 +1,8 @@
 import { PublicKey } from '@solana/web3.js';
 
+//TODO load this from a package.
+import { SpotOrder } from '../../../bot-sdk/src/';
+
 import { Bot, Context, SerumMarket } from '../';
 
 const PARAMS = {
@@ -11,8 +14,8 @@ const PARAMS = {
 };
 
 interface Instrument {
+  market: SerumMarket;
   baseOracleSymbol: string;
-  marketSymbol: string;
   quoteOracleSymbol: string;
 }
 
@@ -34,15 +37,15 @@ export class Maker extends Bot {
       }
 
       this.instruments.push({
+        market,
         baseOracleSymbol: market.marketConfig.baseSymbol + '/USD',
-        marketSymbol: market.marketConfig.symbol,
         quoteOracleSymbol: market.marketConfig.quoteSymbol + '/USD',
       });
     }
   }
 
   process(): void {
-    const orders: any[] = [];
+    const orders: SpotOrder[] = [];
     for (const instrument of this.instruments) {
       const basePrice =
         this.marketDataContext.oracles[instrument.baseOracleSymbol].price;
@@ -56,6 +59,8 @@ export class Maker extends Bot {
         //TODO only update orders if the price has moved significantly using repriceBPS.
 
         orders.push({
+          marketConfig: instrument.market.marketConfig,
+          market: instrument.market.market!,
           side: 'buy',
           price: bidPrice,
           size: PARAMS.orderSize,
@@ -63,6 +68,8 @@ export class Maker extends Bot {
           selfTradeBehavior: 'cancelProvide',
         });
         orders.push({
+          marketConfig: instrument.market.marketConfig,
+          market: instrument.market.market!,
           side: 'sell',
           price: askPrice,
           size: PARAMS.orderSize,

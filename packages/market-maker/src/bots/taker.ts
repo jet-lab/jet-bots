@@ -1,6 +1,9 @@
 import { BN } from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
 
+//TODO load this from a package.
+import { SpotOrder } from '../../../bot-sdk/src/';
+
 import { Bot, Context, SerumMarket } from '../';
 
 const PARAMS = {
@@ -27,7 +30,8 @@ export class Taker extends Bot {
   }
 
   process(): void {
-    const orders: any[] = [];
+    console.log(``);
+    const orders: SpotOrder[] = [];
     for (const market of Object.values<SerumMarket>(
       this.tradingContext.markets,
     )) {
@@ -35,11 +39,12 @@ export class Taker extends Bot {
       if (p < PARAMS.takeProbability) {
         if (market.bids) {
           const priceLevels = market.bids.getL2(1);
-
           if (priceLevels.length == 1) {
             const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
               priceLevels[0];
             orders.push({
+              marketConfig: market.marketConfig,
+              market: market.market!,
               side: 'sell',
               price,
               size,
@@ -55,6 +60,8 @@ export class Taker extends Bot {
             const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
               priceLevels[0];
             orders.push({
+              marketConfig: market.marketConfig,
+              market: market.market!,
               side: 'buy',
               price,
               size,

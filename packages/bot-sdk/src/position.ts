@@ -15,6 +15,7 @@ export class Position {
   decimals: number;
   isNative: boolean;
   mint: PublicKey;
+  openOrdersAccount?: PublicKey;
   symbol: string;
   tokenAccount: PublicKey;
 
@@ -27,6 +28,7 @@ export class Position {
     decimals: number;
     isNative: boolean;
     mint: PublicKey;
+    openOrdersAccount?: PublicKey;
     symbol: string;
     tokenAccount: PublicKey;
   }) {
@@ -34,6 +36,7 @@ export class Position {
     this.decimals = params.decimals;
     this.isNative = params.isNative;
     this.mint = params.mint;
+    this.openOrdersAccount = params.openOrdersAccount;
     this.symbol = params.symbol;
     this.tokenAccount = params.tokenAccount;
   }
@@ -74,4 +77,35 @@ export class Position {
       tokenAccount: associatedTokenAddress,
     });
   }
+
+  /*
+  async settleFunds() {
+    // @ts-ignore
+    const vaultSigner = await PublicKey.createProgramAddress(
+      [
+        this.market.address.toBuffer(),
+        this.market.decoded.vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      this.market.programId,
+    );
+
+    const transaction = new Transaction().add(
+      DexInstructions.settleFunds({
+        market: this.market.address,
+        openOrders: this.openOrdersAccount,
+        owner: this.account.publicKey,
+        baseVault: this.market.decoded.baseVault,
+        quoteVault: this.market.decoded.quoteVault,
+        baseWallet: this.baseTokenAccount,
+        quoteWallet: this.quoteTokenAccount,
+        vaultSigner,
+        programId: this.market.programId,
+        referrerQuoteWallet: this.quoteTokenAccount,
+      }),
+    );
+    await sendAndConfirmTransaction(this.connection, transaction, [
+      this.account,
+    ]);
+  }
+  */
 }
