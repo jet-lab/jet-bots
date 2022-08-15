@@ -19,9 +19,12 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import assert from 'assert';
+import * as fs from 'fs';
 
-import { Market, Order } from './market';
+import { findOpenOrdersAccountsForOwner, Market, Order } from './market';
 import { Position } from './position';
+
+import CONFIG from './config.json';
 
 export class MarginAccount {
   //address: PublicKey;
@@ -30,34 +33,35 @@ export class MarginAccount {
   //delegate?: Account;
   owner?: Account;
   payer: Account;
+  serumProgramId: PublicKey;
 
-  listening: boolean = false;
+  // Populated after load.
+  loaded: boolean = false;
   markets: Record<string, Market> = {};
   payerBalance: number = 0;
   positions: Record<string, Position> = {};
 
-  constructor(params: {
-    //address: PublicKey;
-    config: any;
-    connection: Connection;
-    //delegate?: Account;
-    owner?: Account;
-    payer: Account;
-  }) {
-    //this.address = params.address;
-    this.config = params.config;
-    this.connection = params.connection;
-    //this.delegate = params.delegate;
-    this.owner = params.owner;
-    this.payer = params.payer;
+  // Populated after listen.
+  listening: boolean = false;
+
+  constructor(cluster: string, keyfile: string) {
+    const config = loadConfig(cluster);
+    const connection = new Connection(config.url, 'processed' as Commitment);
+    const account = new Account(JSON.parse(fs.readFileSync(keyfile, 'utf-8')));
+
+    //this.address = address;
+    this.config = config;
+    this.connection = connection;
+    //this.delegate = delegate;
+    this.owner = account;
+    this.payer = account;
+    this.serumProgramId = new PublicKey(this.config.serumProgramId);
   }
 
-  static async createMarginAccount(params: {
-    config: any;
-    connection: Connection;
-    owner: Account;
-    payer: Account;
-  }): Promise<MarginAccount> {
+  static async createMarginAccount(
+    cluster: string,
+    keyfile: string,
+  ): Promise<MarginAccount> {
     //TODO
     throw new Error('Implement.');
   }
@@ -95,18 +99,17 @@ export class MarginAccount {
       const market = new Market(marketConfig);
       this.markets[marketConfig.symbol] = market;
     }
-    assert(this.config.serumProgramId);
     await Market.load(
       this.connection,
       this.owner!.publicKey,
-      new PublicKey(this.config.serumProgramId),
+      this.serumProgramId,
       Object.values<Market>(this.markets),
     );
+
+    this.loaded = true;
   }
 
   async listen(): Promise<void> {
-    this.listening = true;
-
     this.connection.onAccountChange(
       this.payer.publicKey,
       (accountInfo: AccountInfo<Buffer>, context: Context) => {
@@ -131,6 +134,8 @@ export class MarginAccount {
     for (const market of Object.values<Market>(this.markets)) {
       market.listenOpenOrders(this.connection);
     }
+
+    this.listening = true;
   }
 
   async airdrop(symbol: string, amount: number): Promise<void> {
@@ -187,100 +192,73 @@ export class MarginAccount {
     //throw new Error('Implement.');
   }
 
-  async closeMarginAccount(): Promise<void> {
-    //TODO
-    //await this.closeOpenOrdersAccounts();
-
-    throw new Error('Implement.');
-
-    /*
-    async closeOpenOrdersAccounts() {
-      console.log(
-        `closeOpenOrdersAccounts ${this.context.marginAccount!.owner.publicKey}`,
+  async closeOpenOrders(): Promise<void> {
+    const transaction = new Transaction();
+    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+      this.connection,
+      this.owner!.publicKey,
+      this.serumProgramId,
+    );
+    for (const openOrdersAccount of openOrdersAccounts) {
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
+        this.serumProgramId,
       );
-      const openOrdersAccounts = await findOpenOrdersAccounts(
-        this.connection,
-        this.market.address,
-        this.account.publicKey,
-        this.market.programId,
-      );
-
-      const baseWallet = await getAssociatedTokenAddress(
-        new PublicKey(this.market.baseMintAddress),
-        this.account.publicKey,
-      );
-      const quoteWallet = await getAssociatedTokenAddress(
-        new PublicKey(this.market.quoteMintAddress),
-        this.account.publicKey,
-      );
-
-      // @ts-ignore
-      const vaultSigner = await PublicKey.createProgramAddress(
-        [
-          this.market.address.toBuffer(),
-          this.market.decoded.vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
-        ],
-        this.market.programId,
-      );
-
-      for (const openOrdersAccount of openOrdersAccounts) {
-        //console.log(`openOrdersAccount = ${openOrdersAccount}`);
-        const accountInfo = await this.connection.getAccountInfo(
-          openOrdersAccount,
+      let hasOrders = false;
+      openOrders.orders.forEach(orderId => {
+        if (!orderId.eq(new BN(0))) hasOrders = true;
+      });
+      if (hasOrders) {
+        console.log(
+          `OpenOrders account still has open orders: ${openOrdersAccount.publicKey}`,
         );
-        if (!accountInfo) continue;
-        const openOrders = OpenOrders.fromAccountInfo(
-          openOrdersAccount,
-          accountInfo,
-          this.market.programId,
-        );
-        let hasOrders = false;
-        openOrders.orders.forEach(orderId => {
-          if (!orderId.eq(new BN(0))) hasOrders = true;
-        });
-        if (hasOrders) continue;
-
-        const transaction = new Transaction();
-
+        continue;
+      }
+      const marketConfig = Object.values<any>(this.config.markets).find(
+        marketConfig => {
+          return marketConfig.market == openOrders.market.toBase58();
+        },
+      );
+      if (marketConfig) {
         if (
           Number(openOrders.baseTokenFree) > 0 ||
           Number(openOrders.quoteTokenFree) > 0
         ) {
-          transaction.add(
-            DexInstructions.settleFunds({
-              market: this.market.address,
-              openOrders: openOrdersAccount,
-              owner: this.account.publicKey,
-              baseVault: this.market.decoded.baseVault,
-              quoteVault: this.market.decoded.quoteVault,
-              baseWallet,
-              quoteWallet,
-              vaultSigner,
-              programId: this.market.programId,
-              referrerQuoteWallet: this.quoteTokenAccount,
-            }),
+          console.log(
+            `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
           );
+          continue;
         }
-
         transaction.add(
           DexInstructions.closeOpenOrders({
-            market: this.market.address,
-            openOrders: openOrdersAccount,
-            owner: this.account.publicKey,
-            solWallet: this.account.publicKey,
-            programId: this.market.programId,
+            market: new PublicKey(marketConfig.market),
+            openOrders: openOrdersAccount.publicKey,
+            owner: this.owner!.publicKey,
+            solWallet: this.owner!.publicKey,
+            programId: this.serumProgramId,
           }),
         );
-
-        await sendAndConfirmTransaction(this.connection, transaction, [
-          this.account,
-        ]);
       }
     }
-    */
+    if (transaction.instructions.length > 0) {
+      const txid = await sendAndConfirmTransaction(
+        this.connection,
+        transaction,
+        [this.owner!],
+      );
+      console.log(txid);
+    }
+  }
+
+  async closeMarginAccount(): Promise<void> {
+    //await this.settleFunds();
+
+    await this.closeOpenOrders();
   }
 
   async createOpenOrders(): Promise<void> {
+    //TODO do this in a batch.
     for (const market of Object.values<Market>(this.markets)) {
       if (!market.openOrders) {
         await market.createOpenOrders(this.connection, this.owner!);
@@ -311,6 +289,7 @@ export class MarginAccount {
   }
 
   printOpenOrders(): void {
+    assert(this.loaded);
     for (const market of Object.values<Market>(this.markets)) {
       console.log(market.marketConfig.symbol);
       if (market.openOrders) {
@@ -387,7 +366,7 @@ export class MarginAccount {
         }
 
         /*
-        await sendAndConfirmTransaction(
+        const txid = await sendAndConfirmTransaction(
           this.connection,
           transaction,
           [this.payer],
@@ -472,10 +451,15 @@ const airdropTokens = async (
       keys,
     }),
   );
-  await sendAndConfirmTransaction(connection, tx, [feePayerAccount], {
-    skipPreflight: false,
-    commitment: 'singleGossip',
-  });
+  const txid = await sendAndConfirmTransaction(
+    connection,
+    tx,
+    [feePayerAccount],
+    {
+      skipPreflight: false,
+      commitment: 'singleGossip',
+    },
+  );
 };
 
 const getMintPubkeyFromTokenAccountPubkey = async (
@@ -496,3 +480,27 @@ const getMintPubkeyFromTokenAccountPubkey = async (
     );
   }
 };
+
+function loadConfig(cluster: string): any {
+  switch (cluster) {
+    case 'd':
+    case 'devnet': {
+      assert(CONFIG.devnet);
+      return CONFIG.devnet;
+    }
+    case 'l':
+    case 'localnet': {
+      assert(CONFIG.localnet);
+      return CONFIG.localnet;
+    }
+    case 'm':
+    case 'mainnet':
+    case 'mainnet-beta': {
+      assert(CONFIG['mainnet-beta']);
+      return CONFIG['mainnet-beta'];
+    }
+    default: {
+      throw new Error(`Invalid cluster: ${cluster}`);
+    }
+  }
+}

@@ -126,6 +126,39 @@ export class Market {
     }
     */
   }
+
+  async settleFunds() {
+    throw new Error('Implement.');
+
+    /*
+    // @ts-ignore
+    const vaultSigner = await PublicKey.createProgramAddress(
+      [
+        this.market.address.toBuffer(),
+        this.market.decoded.vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
+      ],
+      this.market.programId,
+    );
+
+    const transaction = new Transaction().add(
+      DexInstructions.settleFunds({
+        market: this.market.address,
+        openOrders: this.openOrdersAccount,
+        owner: this.account.publicKey,
+        baseVault: this.market.decoded.baseVault,
+        quoteVault: this.market.decoded.quoteVault,
+        baseWallet: this.baseTokenAccount,
+        quoteWallet: this.quoteTokenAccount,
+        vaultSigner,
+        programId: this.market.programId,
+        referrerQuoteWallet: this.quoteTokenAccount,
+      }),
+    );
+    const txid = await sendAndConfirmTransaction(this.connection, transaction, [
+      this.account,
+    ]);
+    */
+  }
 }
 
 async function createOpenOrdersAccount(
@@ -153,7 +186,7 @@ async function createOpenOrdersAccount(
     }),
   );
 
-  await sendAndConfirmTransaction(
+  const txid = await sendAndConfirmTransaction(
     connection,
     transaction,
     [owner, openOrdersAccount],
@@ -163,7 +196,7 @@ async function createOpenOrdersAccount(
   return openOrdersAccount.publicKey;
 }
 
-async function findOpenOrdersAccountsForOwner(
+export async function findOpenOrdersAccountsForOwner(
   connection: Connection,
   owner: PublicKey,
   programId: PublicKey,
