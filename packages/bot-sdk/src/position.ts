@@ -1,48 +1,47 @@
 import {
+  AccountLayout,
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddress,
 } from '@solana/spl-token';
 import {
   Account,
+  AccountInfo,
+  Commitment,
   Connection,
+  Context,
   PublicKey,
   sendAndConfirmTransaction,
   Transaction,
 } from '@solana/web3.js';
+import assert from 'assert';
+
+import { TokenConfiguration } from './configuration';
 
 export class Position {
+  tokenConfig: TokenConfiguration;
+
+  tokenAccount?: PublicKey;
   balance: bigint;
-  decimals: number;
-  isNative: boolean;
-  mint: PublicKey;
-  symbol: string;
-  tokenAccount: PublicKey;
 
   // Limits
   minAmount: number = 0;
   maxAmount: number = 0;
 
-  constructor(params: {
-    balance: bigint;
-    decimals: number;
-    isNative: boolean;
-    mint: PublicKey;
-    symbol: string;
-    tokenAccount: PublicKey;
-  }) {
-    this.balance = params.balance;
-    this.decimals = params.decimals;
-    this.isNative = params.isNative;
-    this.mint = params.mint;
-    this.symbol = params.symbol;
-    this.tokenAccount = params.tokenAccount;
+  constructor(
+    tokenConfig: TokenConfiguration,
+    tokenAccount?: PublicKey,
+    balance: bigint = BigInt(0),
+  ) {
+    this.tokenConfig = tokenConfig;
+    this.tokenAccount = tokenAccount;
+    this.balance = balance;
   }
 
   static async create(
     connection: Connection,
     owner: PublicKey,
     payer: Account,
-    tokenConfig: any,
+    tokenConfig: TokenConfiguration,
   ): Promise<Position> {
     const associatedTokenAddress: PublicKey = await getAssociatedTokenAddress(
       new PublicKey(tokenConfig.mint),
@@ -65,13 +64,20 @@ export class Position {
       },
     );
 
-    return new Position({
-      balance: BigInt(0),
-      decimals: tokenConfig.decimals,
-      isNative: tokenConfig.symbol == 'SOL', //TODO this is a hack.
-      mint: new PublicKey(tokenConfig.mint),
-      symbol: tokenConfig.symbol,
-      tokenAccount: associatedTokenAddress,
-    });
+    return new Position(tokenConfig, associatedTokenAddress, BigInt(0));
+  }
+
+  async listen(connection: Connection): Promise<void> {
+    assert(this.tokenAccount);
+    connection.onAccountChange(
+      this.tokenAccount,
+      (accountInfo: AccountInfo<Buffer>, context: Context) => {
+        const tokenAccount = AccountLayout.decode(
+          Buffer.from(accountInfo.data),
+        );
+        this.balance = tokenAccount.amount;
+      },
+      'confirmed' as Commitment,
+    );
   }
 }

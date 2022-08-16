@@ -3,7 +3,13 @@ import assert from 'assert';
 import yargs from 'yargs/yargs';
 
 //TODO load this from a package.
-import { Configuration, MarginAccount, Order } from '../../bot-sdk/src/';
+import {
+  Configuration,
+  MarginAccount,
+  MarketConfiguration,
+  OracleConfiguration,
+  Order,
+} from '../../bot-sdk/src/';
 
 import { PythOracle } from './pyth';
 import { SerumMarket } from './serum';
@@ -77,7 +83,9 @@ export class Context {
       await this.marginAccount.load();
     }
 
-    for (const marketConfig of Object.values<any>(this.configuration.markets)) {
+    for (const marketConfig of Object.values<MarketConfiguration>(
+      this.configuration.markets,
+    )) {
       const market = new SerumMarket(marketConfig);
       this.markets[marketConfig.symbol] = market;
     }
@@ -87,7 +95,9 @@ export class Context {
       Object.values<SerumMarket>(this.markets),
     );
 
-    for (const oracleConfig of Object.values<any>(this.configuration.oracles)) {
+    for (const oracleConfig of Object.values<OracleConfiguration>(
+      this.configuration.oracles,
+    )) {
       const oracle = new PythOracle(oracleConfig);
       this.oracles[oracleConfig.symbol] = oracle;
     }

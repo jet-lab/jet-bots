@@ -21,7 +21,8 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-import { Configuration } from './configuration';
+import { Configuration, MarketConfiguration } from './configuration';
+import { Position } from './position';
 
 export interface Order {
   symbol: string;
@@ -38,11 +39,21 @@ export interface Order {
 
 export class Market {
   market?: SerumMarket;
-  marketConfig: any;
+  marketConfig: MarketConfiguration;
+
+  basePosition: Position;
+  quotePosition: Position;
   openOrders?: OpenOrders;
 
-  constructor(marketConfig: any) {
+  constructor(
+    marketConfig: MarketConfiguration,
+    positions: Record<string, Position>,
+  ) {
     this.marketConfig = marketConfig;
+    assert(positions[this.marketConfig.baseSymbol]);
+    this.basePosition = positions[this.marketConfig.baseSymbol];
+    assert(positions[this.marketConfig.quoteSymbol]);
+    this.quotePosition = positions[this.marketConfig.quoteSymbol];
   }
 
   static async load(
@@ -85,7 +96,9 @@ export class Market {
       );
 
       const market = markets.find(markets => {
-        return markets.marketConfig.market == openOrders.market.toBase58();
+        return (
+          markets.marketConfig.market.toBase58() == openOrders.market.toBase58()
+        );
       });
 
       if (market) {
@@ -126,11 +139,11 @@ export class Market {
         Number(openOrders.baseTokenFree) > 0 ||
         Number(openOrders.quoteTokenFree) > 0
       ) {
-        const marketConfig = Object.values<any>(configuration.markets).find(
-          marketConfig => {
-            return marketConfig.market == openOrders.market.toBase58();
-          },
-        );
+        const marketConfig = Object.values<MarketConfiguration>(
+          configuration.markets,
+        ).find(marketConfig => {
+          return marketConfig.market.toBase58() == openOrders.market.toBase58();
+        });
         if (marketConfig) {
           console.log(
             `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
@@ -162,6 +175,7 @@ export class Market {
     connection: Connection,
     owner: Account,
     markets: Market[],
+    listening: boolean,
   ): Promise<void> {
     const publicKeys: PublicKey[] = [];
     const transaction = new Transaction();
@@ -245,6 +259,7 @@ export class Market {
     */
   }
 
+  //TODO do this in a batch.
   async settleFunds() {
     throw new Error('Implement.');
 

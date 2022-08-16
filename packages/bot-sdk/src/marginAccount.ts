@@ -16,7 +16,11 @@ import {
 import assert from 'assert';
 import * as fs from 'fs';
 
-import { Configuration } from './configuration';
+import {
+  Configuration,
+  MarketConfiguration,
+  TokenConfiguration,
+} from './configuration';
 import { Market, Order } from './market';
 import { Position } from './position';
 
@@ -60,12 +64,19 @@ export class MarginAccount {
   static async createMarginAccount(
     cluster: string,
     keyfile: string,
-  ): Promise<MarginAccount> {
+  ): Promise<void> {
     //TODO
+
+    // Create token accounts.
+
+    //await this.createOpenOrders();
+
     throw new Error('Implement.');
   }
 
   async load(): Promise<void> {
+    assert(!this.loaded);
+
     this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
 
     const response = await this.connection.getTokenAccountsByOwner(
@@ -76,26 +87,33 @@ export class MarginAccount {
     );
     for (const item of response.value) {
       const tokenAccount = AccountLayout.decode(Buffer.from(item.account.data));
-      const tokenConfig = Object.values<any>(this.configuration.tokens).find(
-        tokenConfig => {
-          return tokenConfig.mint == tokenAccount.mint.toBase58();
-        },
-      );
+      const tokenConfig = Object.values<TokenConfiguration>(
+        this.configuration.tokens,
+      ).find(tokenConfig => {
+        return tokenConfig.mint.toBase58() == tokenAccount.mint.toBase58();
+      });
       if (tokenConfig) {
-        assert(!this.positions[tokenConfig.symbol]);
-        this.positions[tokenConfig.symbol] = new Position({
-          balance: tokenAccount.amount,
-          decimals: tokenConfig.decimals,
-          isNative: Number(tokenAccount.isNative) != 0,
-          mint: tokenAccount.mint,
-          symbol: tokenConfig.symbol,
-          tokenAccount: item.pubkey,
-        });
+        assert(tokenConfig.mint.toBase58() == tokenAccount.mint.toBase58());
+        this.positions[tokenConfig.symbol] = new Position(
+          tokenConfig,
+          item.pubkey,
+          tokenAccount.amount,
+        );
       }
     }
 
-    for (const marketConfig of Object.values<any>(this.configuration.markets)) {
-      const market = new Market(marketConfig);
+    for (const tokenConfig of Object.values<TokenConfiguration>(
+      this.configuration.tokens,
+    )) {
+      if (!this.positions[tokenConfig.symbol]) {
+        this.positions[tokenConfig.symbol] = new Position(tokenConfig);
+      }
+    }
+
+    for (const marketConfig of Object.values<MarketConfiguration>(
+      this.configuration.markets,
+    )) {
+      const market = new Market(marketConfig, this.positions);
       this.markets[marketConfig.symbol] = market;
     }
     await Market.load(
@@ -109,6 +127,9 @@ export class MarginAccount {
   }
 
   async listen(): Promise<void> {
+    assert(this.loaded);
+    assert(!this.listening);
+
     this.connection.onAccountChange(
       this.payer.publicKey,
       (accountInfo: AccountInfo<Buffer>, context: Context) => {
@@ -118,16 +139,7 @@ export class MarginAccount {
     );
 
     for (const position of Object.values<Position>(this.positions)) {
-      this.connection.onAccountChange(
-        position.tokenAccount,
-        (accountInfo: AccountInfo<Buffer>, context: Context) => {
-          const tokenAccount = AccountLayout.decode(
-            Buffer.from(accountInfo.data),
-          );
-          position.balance = tokenAccount.amount;
-        },
-        'confirmed' as Commitment,
-      );
+      await position.listen(this.connection);
     }
 
     await this.listenOpenOrders();
@@ -136,22 +148,28 @@ export class MarginAccount {
   }
 
   async airdrop(symbol: string, amount: number): Promise<void> {
-    const tokenConfig = Object.values<any>(this.configuration.tokens).find(
-      tokenConfig => {
-        return tokenConfig.symbol == symbol;
-      },
-    );
+    assert(this.loaded);
+
+    const tokenConfig = Object.values<TokenConfiguration>(
+      this.configuration.tokens,
+    ).find(tokenConfig => {
+      return tokenConfig.symbol == symbol;
+    });
     assert(tokenConfig);
 
     if (!this.positions[symbol]) {
-      this.positions[symbol] = await Position.create(
+      const position = await Position.create(
         this.connection,
         this.owner!.publicKey,
         this.payer,
         tokenConfig,
       );
 
-      //TODO listen
+      this.positions[symbol] = position;
+
+      if (this.listening) {
+        await position.listen(this.connection);
+      }
     }
 
     assert(this.positions[symbol]);
@@ -172,6 +190,8 @@ export class MarginAccount {
   }
 
   cancelOrders(): void {
+    assert(this.loaded);
+
     //TODO for every position cancel the orders.
     /*
   async cancelOpenOrders() {
@@ -198,26 +218,39 @@ export class MarginAccount {
   }
 
   async closeMarginAccount(): Promise<void> {
+    assert(this.loaded);
+
     //await this.settleFunds();
 
     await this.closeOpenOrders();
+
+    //TODO close the margin account, transfer the tokens back to the user wallet.
+
+    this.loaded = false;
   }
 
   async createOpenOrders(): Promise<void> {
+    assert(this.loaded);
+
     const markets = Object.values<Market>(this.markets);
     await Market.createOpenOrders(
       this.configuration,
       this.connection,
       this.owner!,
       markets,
+      this.listening,
     );
   }
 
   async deposit(symbol: string, amount: number): Promise<void> {
+    assert(this.loaded);
+
     //TODO
   }
 
   async listenOpenOrders(): Promise<void> {
+    assert(this.loaded);
+    assert(!this.listening);
     const markets = Object.values<Market>(this.markets);
     assert(markets.length > 0);
     for (const market of markets) {
@@ -228,17 +261,20 @@ export class MarginAccount {
   }
 
   printBalance(): void {
+    assert(this.loaded);
+
     console.log('');
     console.log(
       `Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
         2,
       )} SOL`,
     );
+    console.log('');
     for (const position of Object.values<Position>(this.positions)) {
       console.log(
-        `  ${position.symbol} token balance = ${(
+        `${position.tokenConfig.symbol} token balance = ${(
           Number(position.balance) /
-          10 ** position.decimals
+          10 ** position.tokenConfig.decimals
         ).toFixed(2)}`,
       );
     }
@@ -271,6 +307,7 @@ export class MarginAccount {
                 this.connection,
                 this.owner!,
                 [market],
+                this.listening,
               );
               await market.listenOpenOrders(this.connection);
             }
@@ -353,17 +390,19 @@ export class MarginAccount {
 
     let position = this.positions[symbol];
     if (!position) {
-      const tokenConfig = Object.values<any>(this.configuration.tokens).find(
-        tokenConfig => {
-          return tokenConfig.symbol == symbol;
-        },
-      );
-      position = await Position.create(
-        this.connection,
-        this.owner!.publicKey,
-        this.payer,
-        tokenConfig,
-      );
+      const tokenConfig = Object.values<TokenConfiguration>(
+        this.configuration.tokens,
+      ).find(tokenConfig => {
+        return tokenConfig.symbol == symbol;
+      });
+      if (tokenConfig) {
+        position = await Position.create(
+          this.connection,
+          this.owner!.publicKey,
+          this.payer,
+          tokenConfig,
+        );
+      }
       this.positions[symbol] = position;
     }
 
@@ -374,6 +413,8 @@ export class MarginAccount {
   }
 
   async withdraw(symbol: string, amount: number): Promise<void> {
+    assert(this.loaded);
+
     //TODO
   }
 }

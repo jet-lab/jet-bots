@@ -11,8 +11,11 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
+//TODO reference this from a dependency.
+import { MarketConfiguration } from '../../bot-sdk/src';
+
 export class SerumMarket {
-  marketConfig: any;
+  marketConfig: MarketConfiguration;
 
   market?: Market;
   asks?: Orderbook;
@@ -20,7 +23,7 @@ export class SerumMarket {
   events: Event[] = [];
   seqNum: number = 0;
 
-  constructor(marketConfig: any) {
+  constructor(marketConfig: MarketConfiguration) {
     this.marketConfig = marketConfig;
   }
 

@@ -8,12 +8,15 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
+//TODO reference this from a dependency.
+import { OracleConfiguration } from '../../bot-sdk/src';
+
 export class PythOracle {
-  oracleConfig: any;
+  oracleConfig: OracleConfiguration;
 
   price?: PriceData;
 
-  constructor(oracleConfig: any) {
+  constructor(oracleConfig: OracleConfiguration) {
     this.oracleConfig = oracleConfig;
   }
 

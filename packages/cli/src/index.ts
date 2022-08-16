@@ -69,6 +69,7 @@ async function run() {
         k: { alias: 'keyfile', required: true, type: 'string' },
       }).argv;
       const marginAccount = new MarginAccount(argv.c, argv.k);
+      await marginAccount.load();
       await marginAccount.closeMarginAccount();
     },
     'close-open-orders': async () => {
@@ -84,11 +85,7 @@ async function run() {
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
       }).argv;
-      const marginAccount = await MarginAccount.createMarginAccount(
-        argv.c,
-        argv.k,
-      );
-      await marginAccount.load();
+      await MarginAccount.createMarginAccount(argv.c, argv.k);
     },
     'create-open-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
