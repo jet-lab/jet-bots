@@ -1,9 +1,4 @@
 import { BN } from '@project-serum/anchor';
-import {
-  DexInstructions,
-  Market as SerumMarket,
-  OpenOrders,
-} from '@project-serum/serum';
 import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   Account,
@@ -22,7 +17,7 @@ import assert from 'assert';
 import * as fs from 'fs';
 
 import { Configuration } from './configuration';
-import { findOpenOrdersAccountsForOwner, Market, Order } from './market';
+import { Market, Order } from './market';
 import { Position } from './position';
 
 export class MarginAccount {
@@ -135,11 +130,7 @@ export class MarginAccount {
       );
     }
 
-    for (const market of Object.values<Market>(this.markets)) {
-      if (market.openOrders) {
-        await market.listenOpenOrders(this.connection);
-      }
-    }
+    await this.listenOpenOrders();
 
     this.listening = true;
   }
@@ -199,62 +190,11 @@ export class MarginAccount {
   }
 
   async closeOpenOrders(): Promise<void> {
-    const transaction = new Transaction();
-    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+    await Market.closeOpenOrders(
+      this.configuration,
       this.connection,
-      this.owner!.publicKey,
-      this.serumProgramId,
+      this.owner!,
     );
-    for (const openOrdersAccount of openOrdersAccounts) {
-      const openOrders = OpenOrders.fromAccountInfo(
-        openOrdersAccount.publicKey,
-        openOrdersAccount.accountInfo,
-        this.serumProgramId,
-      );
-      let hasOrders = false;
-      openOrders.orders.forEach(orderId => {
-        if (!orderId.eq(new BN(0))) hasOrders = true;
-      });
-      if (hasOrders) {
-        console.log(
-          `OpenOrders account still has open orders: ${openOrdersAccount.publicKey}`,
-        );
-        continue;
-      }
-      const marketConfig = Object.values<any>(this.configuration.markets).find(
-        marketConfig => {
-          return marketConfig.market == openOrders.market.toBase58();
-        },
-      );
-      if (marketConfig) {
-        if (
-          Number(openOrders.baseTokenFree) > 0 ||
-          Number(openOrders.quoteTokenFree) > 0
-        ) {
-          console.log(
-            `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
-          );
-          continue;
-        }
-        transaction.add(
-          DexInstructions.closeOpenOrders({
-            market: new PublicKey(marketConfig.market),
-            openOrders: openOrdersAccount.publicKey,
-            owner: this.owner!.publicKey,
-            solWallet: this.owner!.publicKey,
-            programId: this.serumProgramId,
-          }),
-        );
-      }
-    }
-    if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(
-        this.connection,
-        transaction,
-        [this.owner!],
-      );
-      console.log(txid);
-    }
   }
 
   async closeMarginAccount(): Promise<void> {
@@ -264,12 +204,13 @@ export class MarginAccount {
   }
 
   async createOpenOrders(): Promise<void> {
-    //TODO do this in a batch.
-    for (const market of Object.values<Market>(this.markets)) {
-      if (!market.openOrders) {
-        await market.createOpenOrders(this.connection, this.owner!);
-      }
-    }
+    const markets = Object.values<Market>(this.markets);
+    await Market.createOpenOrders(
+      this.configuration,
+      this.connection,
+      this.owner!,
+      markets,
+    );
   }
 
   async deposit(symbol: string, amount: number): Promise<void> {
@@ -325,7 +266,12 @@ export class MarginAccount {
           const market = this.markets[order.symbol];
           if (market) {
             if (!market.openOrders) {
-              await market.createOpenOrders(this.connection, this.owner!);
+              await Market.createOpenOrders(
+                this.configuration,
+                this.connection,
+                this.owner!,
+                [market],
+              );
               await market.listenOpenOrders(this.connection);
             }
 

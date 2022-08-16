@@ -1,20 +1,27 @@
+import { BN } from '@project-serum/anchor';
 import {
   DexInstructions,
   Market as SerumMarket,
   OpenOrders,
 } from '@project-serum/serum';
+import { encodeInstruction } from '@project-serum/serum/lib/instructions';
 import { MARKET_STATE_LAYOUT_V2 } from '@project-serum/serum/lib/market';
 import {
   Account,
   AccountInfo,
+  AccountMeta,
   Commitment,
   Connection,
   Context as SolanaContext,
   PublicKey,
   sendAndConfirmTransaction,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import assert from 'assert';
+
+import { Configuration } from './configuration';
 
 export interface Order {
   symbol: string;
@@ -70,10 +77,10 @@ export class Market {
       programId,
     );
 
-    for (const account of openOrdersAccounts) {
+    for (const openOrdersAccount of openOrdersAccounts) {
       const openOrders = OpenOrders.fromAccountInfo(
-        account.publicKey,
-        account.accountInfo,
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
         programId,
       );
 
@@ -87,25 +94,135 @@ export class Market {
     }
   }
 
-  async createOpenOrders(
+  static async closeOpenOrders(
+    configuration: Configuration,
     connection: Connection,
     owner: Account,
   ): Promise<void> {
-    if (this.market) {
-      const openOrdersAccount = await createOpenOrdersAccount(
-        connection,
-        this.market.address,
-        owner,
-        this.market.programId,
+    const transaction = new Transaction();
+    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+      connection,
+      owner.publicKey,
+      configuration.serumProgramId,
+    );
+    for (const openOrdersAccount of openOrdersAccounts) {
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
+        configuration.serumProgramId,
       );
-      this.openOrders = await OpenOrders.load(
-        connection,
-        openOrdersAccount,
-        this.market.programId,
-      );
-    } else {
-      throw new Error(`Market is not loaded.`);
+      let hasOrders = false;
+      openOrders.orders.forEach(orderId => {
+        if (!orderId.eq(new BN(0))) hasOrders = true;
+      });
+      if (hasOrders) {
+        console.log(
+          `OpenOrders account still has open orders: ${openOrdersAccount.publicKey}`,
+        );
+        continue;
+      }
+
+      if (
+        Number(openOrders.baseTokenFree) > 0 ||
+        Number(openOrders.quoteTokenFree) > 0
+      ) {
+        const marketConfig = Object.values<any>(configuration.markets).find(
+          marketConfig => {
+            return marketConfig.market == openOrders.market.toBase58();
+          },
+        );
+        if (marketConfig) {
+          console.log(
+            `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
+          );
+        }
+        continue;
+      } else {
+        transaction.add(
+          DexInstructions.closeOpenOrders({
+            market: new PublicKey(openOrders.market),
+            openOrders: openOrdersAccount.publicKey,
+            owner: owner.publicKey,
+            solWallet: owner.publicKey,
+            programId: configuration.serumProgramId,
+          }),
+        );
+      }
     }
+    if (transaction.instructions.length > 0) {
+      const txid = await sendAndConfirmTransaction(connection, transaction, [
+        owner,
+      ]);
+      console.log(txid);
+    }
+  }
+
+  static async createOpenOrders(
+    configuration: Configuration,
+    connection: Connection,
+    owner: Account,
+    markets: Market[],
+  ): Promise<void> {
+    const publicKeys: PublicKey[] = [];
+    const transaction = new Transaction();
+    const signers: Account[] = [];
+
+    for (const market of markets) {
+      assert(market.marketConfig);
+      assert(market.market);
+      if (!market.openOrders) {
+        const openOrdersAccount = new Account();
+        publicKeys.push(openOrdersAccount.publicKey);
+        transaction.add(
+          await OpenOrders.makeCreateAccountTransaction(
+            connection,
+            market.market.address,
+            owner.publicKey,
+            openOrdersAccount.publicKey,
+            configuration.serumProgramId,
+          ),
+          DexInstructions.initOpenOrders({
+            market: market.market!.address,
+            openOrders: openOrdersAccount.publicKey,
+            owner: owner.publicKey,
+            programId: configuration.serumProgramId,
+            marketAuthority: undefined,
+          }),
+        );
+        signers.push(owner);
+        signers.push(openOrdersAccount);
+      }
+    }
+
+    if (transaction.instructions.length > 0) {
+      const txid = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        signers,
+      );
+      console.log(txid);
+    }
+
+    const openOrdersAccounts = await connection.getMultipleAccountsInfo(
+      publicKeys,
+    );
+
+    for (const market of markets) {
+      assert(market.market);
+      if (!market.openOrders) {
+        const publicKey = publicKeys.shift();
+        assert(publicKey);
+        const openOrdersAccount = openOrdersAccounts.shift();
+        assert(openOrdersAccount);
+        market.openOrders = OpenOrders.fromAccountInfo(
+          publicKey,
+          openOrdersAccount,
+          configuration.serumProgramId,
+        );
+      }
+    }
+
+    //TODO if already listening, start listening to these accounts.
   }
 
   async listenOpenOrders(connection: Connection): Promise<void> {
@@ -162,42 +279,7 @@ export class Market {
   }
 }
 
-async function createOpenOrdersAccount(
-  connection: Connection,
-  marketAddress: PublicKey,
-  owner: Account,
-  serumProgramId: PublicKey,
-): Promise<PublicKey> {
-  const openOrdersAccount = new Account();
-
-  const transaction = new Transaction().add(
-    await OpenOrders.makeCreateAccountTransaction(
-      connection,
-      marketAddress,
-      owner.publicKey,
-      openOrdersAccount.publicKey,
-      serumProgramId,
-    ),
-    DexInstructions.initOpenOrders({
-      market: marketAddress,
-      openOrders: openOrdersAccount.publicKey,
-      owner: owner.publicKey,
-      programId: serumProgramId,
-      marketAuthority: undefined,
-    }),
-  );
-
-  const txid = await sendAndConfirmTransaction(
-    connection,
-    transaction,
-    [owner, openOrdersAccount],
-    { commitment: 'processed' },
-  );
-
-  return openOrdersAccount.publicKey;
-}
-
-export async function findOpenOrdersAccountsForOwner(
+async function findOpenOrdersAccountsForOwner(
   connection: Connection,
   owner: PublicKey,
   programId: PublicKey,
