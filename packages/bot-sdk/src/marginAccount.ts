@@ -139,7 +139,9 @@ export class MarginAccount {
     );
 
     for (const position of Object.values<Position>(this.positions)) {
-      await position.listen(this.connection);
+      if (position.tokenAccount) {
+        await position.listen(this.connection);
+      }
     }
 
     await this.listenOpenOrders();
@@ -192,7 +194,7 @@ export class MarginAccount {
   cancelOrders(): void {
     assert(this.loaded);
 
-    //TODO for every position cancel the orders.
+    //TODO for every market cancel the orders.
     /*
   async cancelOpenOrders() {
     for (const market of Object.values<Market>(this.context.markets)) {
@@ -206,7 +208,8 @@ export class MarginAccount {
     }
   }
     */
-    //throw new Error('Implement.');
+
+    throw new Error('Implement.');
   }
 
   async closeOpenOrders(): Promise<void> {
@@ -246,6 +249,7 @@ export class MarginAccount {
     assert(this.loaded);
 
     //TODO
+    throw new Error('Implement');
   }
 
   async listenOpenOrders(): Promise<void> {
@@ -265,17 +269,17 @@ export class MarginAccount {
 
     console.log('');
     console.log(
-      `Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
+      `  Payer balance = ${(this.payerBalance / LAMPORTS_PER_SOL).toFixed(
         2,
       )} SOL`,
     );
     console.log('');
     for (const position of Object.values<Position>(this.positions)) {
       console.log(
-        `${position.tokenConfig.symbol} token balance = ${(
+        `  ${position.tokenConfig.symbol} token balance = ${(
           Number(position.balance) /
           10 ** position.tokenConfig.decimals
-        ).toFixed(2)}`,
+        ).toFixed(position.tokenConfig.precision)}`,
       );
     }
     console.log('');
@@ -364,17 +368,18 @@ export class MarginAccount {
           }
         }
 
-        /*
-        const txid = await sendAndConfirmTransaction(
-          this.connection,
-          transaction,
-          [this.payer],
-          {
-            skipPreflight: true,
-            commitment: 'processed',
-          },
-        );
-        */
+        if (transaction.instructions.length > 0) {
+          const txid = await sendAndConfirmTransaction(
+            this.connection,
+            transaction,
+            [this.payer],
+            {
+              skipPreflight: true,
+              commitment: 'processed',
+            },
+          );
+          console.log(txid);
+        }
       } catch (err) {}
     })();
   }
@@ -412,10 +417,17 @@ export class MarginAccount {
     //TODO write this to the user's margin account settings on-chain.
   }
 
-  async withdraw(symbol: string, amount: number): Promise<void> {
+  async settleFunds(): Promise<void> {
     assert(this.loaded);
 
     //TODO
+    throw new Error('Implement');
+  }
+
+  async withdraw(symbol: string, amount: number): Promise<void> {
+    assert(this.loaded);
+    //TODO
+    throw new Error('Implement');
   }
 }
 

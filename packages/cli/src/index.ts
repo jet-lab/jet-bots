@@ -126,6 +126,15 @@ async function run() {
       await marginAccount.load();
       marginAccount.printOpenOrders();
     },
+    'settle-funds': async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c, argv.k);
+      await marginAccount.load();
+      await marginAccount.settleFunds();
+    },
     withdraw: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         a: { alias: 'amount', required: true, type: 'number' },

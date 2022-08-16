@@ -68,6 +68,9 @@ export class Position {
   }
 
   async listen(connection: Connection): Promise<void> {
+    console.log(
+      `Listening to token account for ${this.tokenConfig.symbol} ${this.tokenAccount}`,
+    );
     assert(this.tokenAccount);
     connection.onAccountChange(
       this.tokenAccount,

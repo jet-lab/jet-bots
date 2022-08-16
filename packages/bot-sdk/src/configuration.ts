@@ -60,12 +60,14 @@ export class TokenConfiguration {
   decimals: number;
   faucet?: PublicKey;
   mint: PublicKey;
+  precision: number;
 
   constructor(tokenConfig: any) {
     this.symbol = tokenConfig.symbol;
     this.decimals = tokenConfig.decimals;
     if (tokenConfig.faucet) this.faucet = new PublicKey(tokenConfig.faucet);
     this.mint = new PublicKey(tokenConfig.mint);
+    this.precision = tokenConfig.precision;
   }
 }
 
