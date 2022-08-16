@@ -20,8 +20,12 @@ class Controller {
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
-      if (context.marginAccount) {
-        await context.marginAccount.cancelOrders();
+      try {
+        if (context.marginAccount) {
+          await context.marginAccount.cancelOrders();
+        }
+      } catch (err) {
+        console.log(JSON.stringify(err));
       }
 
       console.log(`MARKET MAKER EXITED`);
@@ -43,6 +47,7 @@ class Controller {
 
 async function run() {
   const context = new Context();
+
   const mainnetContext = new Context({
     cluster: 'mainnet-beta',
     symbols: context.symbols,

@@ -1,19 +1,9 @@
-import {
-  Account,
-  Cluster,
-  Commitment,
-  Connection,
-  PublicKey,
-} from '@solana/web3.js';
+import { Cluster, Commitment, Connection } from '@solana/web3.js';
 import assert from 'assert';
-import * as fs from 'fs';
 import yargs from 'yargs/yargs';
 
 //TODO load this from a package.
-import { MarginAccount, Order } from '../../bot-sdk/src/';
-
-//TODO load this from a package.
-import CONFIG from '../../bot-sdk/src/config.json';
+import { Configuration, MarginAccount, Order } from '../../bot-sdk/src/';
 
 import { PythOracle } from './pyth';
 import { SerumMarket } from './serum';
@@ -25,7 +15,7 @@ export interface BotFactory {
 export class Context {
   args: any;
   bot?: Bot;
-  config: any;
+  configuration: Configuration;
   marginAccount?: MarginAccount;
   symbols: string[] = [];
 
@@ -40,11 +30,11 @@ export class Context {
     } = {},
   ) {
     if (params.cluster) {
-      this.symbols = params.symbols!;
-      assert(this.symbols);
-      this.config = filterConfig(loadConfig(params.cluster), this.symbols);
+      assert(params.symbols);
+      this.symbols = params.symbols;
+      this.configuration = new Configuration(params.cluster, params.symbols);
       this.connection = new Connection(
-        this.config.url,
+        this.configuration.url,
         'processed' as Commitment,
       );
     } else {
@@ -56,20 +46,13 @@ export class Context {
       }).argv;
       this.symbols = this.args.s.split(',');
       assert(this.symbols);
-      this.config = filterConfig(loadConfig(this.args.c), this.symbols);
-      this.connection = new Connection(
-        this.config.url,
-        'processed' as Commitment,
+      this.marginAccount = new MarginAccount(
+        this.args.c,
+        this.args.k,
+        this.symbols,
       );
-      const account = new Account(
-        JSON.parse(fs.readFileSync(this.args.k, 'utf-8')),
-      );
-      this.marginAccount = new MarginAccount({
-        config: this.config,
-        connection: this.connection,
-        owner: account,
-        payer: account,
-      });
+      this.configuration = this.marginAccount.configuration;
+      this.connection = this.marginAccount.connection;
     }
   }
 
@@ -94,18 +77,17 @@ export class Context {
       await this.marginAccount.load();
     }
 
-    for (const marketConfig of Object.values<any>(this.config.markets)) {
+    for (const marketConfig of Object.values<any>(this.configuration.markets)) {
       const market = new SerumMarket(marketConfig);
       this.markets[marketConfig.symbol] = market;
     }
-    assert(this.config.serumProgramId);
     await SerumMarket.load(
       this.connection,
-      new PublicKey(this.config.serumProgramId),
+      this.configuration.serumProgramId,
       Object.values<SerumMarket>(this.markets),
     );
 
-    for (const oracleConfig of Object.values<any>(this.config.oracles)) {
+    for (const oracleConfig of Object.values<any>(this.configuration.oracles)) {
       const oracle = new PythOracle(oracleConfig);
       this.oracles[oracleConfig.symbol] = oracle;
     }
@@ -146,54 +128,6 @@ export abstract class Bot {
   sendOrders(orders: Order[]): void {
     if (this.tradingContext.marginAccount) {
       this.tradingContext.marginAccount.sendOrders(orders);
-    }
-  }
-}
-
-function filterConfig(config: any, symbols: string[]) {
-  const filteredConfig = { ...config, oracles: {}, markets: {} };
-  Object.values<any>(config.markets)
-    .filter(market => {
-      return symbols.includes(market.symbol);
-    })
-    .forEach(market => {
-      filteredConfig.markets[market.symbol.replace('/', '_')] = market;
-    });
-  Object.values<any>(config.oracles)
-    .filter(oracle => {
-      //TODO this isn't the best way to do this.
-      return (
-        oracle.symbol == 'USDC/USD' ||
-        symbols.includes(oracle.symbol + 'C') ||
-        symbols.includes(oracle.symbol + 'T')
-      );
-    })
-    .forEach(oracle => {
-      filteredConfig.oracles[oracle.symbol.replace('/', '_')] = oracle;
-    });
-  return filteredConfig;
-}
-
-function loadConfig(cluster: string): any {
-  switch (cluster) {
-    case 'd':
-    case 'devnet': {
-      assert(CONFIG.devnet);
-      return CONFIG.devnet;
-    }
-    case 'l':
-    case 'localnet': {
-      assert(CONFIG.localnet);
-      return CONFIG.localnet;
-    }
-    case 'm':
-    case 'mainnet':
-    case 'mainnet-beta': {
-      assert(CONFIG['mainnet-beta']);
-      return CONFIG['mainnet-beta'];
-    }
-    default: {
-      throw new Error(`Invalid cluster: ${cluster}`);
     }
   }
 }

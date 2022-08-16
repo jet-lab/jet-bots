@@ -21,19 +21,19 @@ import {
 import assert from 'assert';
 import * as fs from 'fs';
 
+import { Configuration } from './configuration';
 import { findOpenOrdersAccountsForOwner, Market, Order } from './market';
 import { Position } from './position';
 
-import CONFIG from './config.json';
-
 export class MarginAccount {
   //address: PublicKey;
-  config: any;
+  configuration: Configuration;
   connection: Connection;
   //delegate?: Account;
   owner?: Account;
   payer: Account;
   serumProgramId: PublicKey;
+  symbols?: string[];
 
   // Populated after load.
   loaded: boolean = false;
@@ -44,18 +44,22 @@ export class MarginAccount {
   // Populated after listen.
   listening: boolean = false;
 
-  constructor(cluster: string, keyfile: string) {
-    const config = loadConfig(cluster);
-    const connection = new Connection(config.url, 'processed' as Commitment);
+  constructor(cluster: string, keyfile: string, symbols?: string[]) {
+    const configuration = new Configuration(cluster, symbols);
+    const connection = new Connection(
+      configuration.url,
+      'processed' as Commitment,
+    );
     const account = new Account(JSON.parse(fs.readFileSync(keyfile, 'utf-8')));
 
     //this.address = address;
-    this.config = config;
+    this.configuration = configuration;
     this.connection = connection;
     //this.delegate = delegate;
     this.owner = account;
     this.payer = account;
-    this.serumProgramId = new PublicKey(this.config.serumProgramId);
+    this.serumProgramId = this.configuration.serumProgramId;
+    this.symbols = symbols;
   }
 
   static async createMarginAccount(
@@ -77,7 +81,7 @@ export class MarginAccount {
     );
     for (const item of response.value) {
       const tokenAccount = AccountLayout.decode(Buffer.from(item.account.data));
-      const tokenConfig = Object.values<any>(this.config.tokens).find(
+      const tokenConfig = Object.values<any>(this.configuration.tokens).find(
         tokenConfig => {
           return tokenConfig.mint == tokenAccount.mint.toBase58();
         },
@@ -95,7 +99,7 @@ export class MarginAccount {
       }
     }
 
-    for (const marketConfig of Object.values<any>(this.config.markets)) {
+    for (const marketConfig of Object.values<any>(this.configuration.markets)) {
       const market = new Market(marketConfig);
       this.markets[marketConfig.symbol] = market;
     }
@@ -132,14 +136,16 @@ export class MarginAccount {
     }
 
     for (const market of Object.values<Market>(this.markets)) {
-      market.listenOpenOrders(this.connection);
+      if (market.openOrders) {
+        await market.listenOpenOrders(this.connection);
+      }
     }
 
     this.listening = true;
   }
 
   async airdrop(symbol: string, amount: number): Promise<void> {
-    const tokenConfig = Object.values<any>(this.config.tokens).find(
+    const tokenConfig = Object.values<any>(this.configuration.tokens).find(
       tokenConfig => {
         return tokenConfig.symbol == symbol;
       },
@@ -160,12 +166,12 @@ export class MarginAccount {
     assert(this.positions[symbol]);
     const position = this.positions[symbol];
 
-    assert(this.config.splTokenFaucet);
+    assert(this.configuration.splTokenFaucet);
     assert(tokenConfig.faucet);
 
     await airdropTokens(
       this.connection,
-      new PublicKey(this.config.splTokenFaucet),
+      this.configuration.splTokenFaucet,
       // @ts-ignore
       this.payer,
       new PublicKey(tokenConfig.faucet),
@@ -215,7 +221,7 @@ export class MarginAccount {
         );
         continue;
       }
-      const marketConfig = Object.values<any>(this.config.markets).find(
+      const marketConfig = Object.values<any>(this.configuration.markets).find(
         marketConfig => {
           return marketConfig.market == openOrders.market.toBase58();
         },
@@ -268,6 +274,16 @@ export class MarginAccount {
 
   async deposit(symbol: string, amount: number): Promise<void> {
     //TODO
+  }
+
+  async listenOpenOrders(): Promise<void> {
+    const markets = Object.values<Market>(this.markets);
+    assert(markets.length > 0);
+    for (const market of markets) {
+      if (market.openOrders) {
+        await market.listenOpenOrders(this.connection);
+      }
+    }
   }
 
   printBalance(): void {
@@ -391,7 +407,7 @@ export class MarginAccount {
 
     let position = this.positions[symbol];
     if (!position) {
-      const tokenConfig = Object.values<any>(this.config.tokens).find(
+      const tokenConfig = Object.values<any>(this.configuration.tokens).find(
         tokenConfig => {
           return tokenConfig.symbol == symbol;
         },
@@ -480,27 +496,3 @@ const getMintPubkeyFromTokenAccountPubkey = async (
     );
   }
 };
-
-function loadConfig(cluster: string): any {
-  switch (cluster) {
-    case 'd':
-    case 'devnet': {
-      assert(CONFIG.devnet);
-      return CONFIG.devnet;
-    }
-    case 'l':
-    case 'localnet': {
-      assert(CONFIG.localnet);
-      return CONFIG.localnet;
-    }
-    case 'm':
-    case 'mainnet':
-    case 'mainnet-beta': {
-      assert(CONFIG['mainnet-beta']);
-      return CONFIG['mainnet-beta'];
-    }
-    default: {
-      throw new Error(`Invalid cluster: ${cluster}`);
-    }
-  }
-}

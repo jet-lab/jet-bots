@@ -109,6 +109,7 @@ export class Market {
   }
 
   async listenOpenOrders(connection: Connection): Promise<void> {
+    console.log(`Listening to OpenOrders for ${this.marketConfig.symbol}`);
     assert(this.openOrders);
     connection.onAccountChange(
       this.openOrders.address,
