@@ -2,6 +2,7 @@
 
 import { BN } from '@project-serum/anchor';
 import { decodeEventQueue, DexInstructions } from '@project-serum/serum';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 import {
   Commitment,
   Connection,
@@ -12,27 +13,31 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-import { loadConfig } from './context';
-import { getAssociatedTokenAddress, sleep } from './utils';
+import {
+  Configuration,
+  MarketConfiguration,
+  TokenConfiguration,
+} from '../../bot-sdk/src'; //TODO reference a package.
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function crank() {
   const payer = Keypair.generate();
 
-  //const config = loadConfig('localnet');
-  const config = loadConfig('devnet');
+  const configuration = new Configuration('devnet');
 
-  const connection = new Connection(config.url, 'processed' as Commitment);
+  const connection = new Connection(
+    configuration.url,
+    'processed' as Commitment,
+  );
 
-  assert(config.serumProgramId);
-  const serumProgramId = new PublicKey(config.serumProgramId);
+  assert(configuration.serumProgramId);
+  const serumProgramId = new PublicKey(configuration.serumProgramId);
 
-  const markets = Object.keys(config.markets).map(key => {
-    return config.markets[key];
-  });
-
-  const tokens = Object.keys(config.tokens).map(key => {
-    return config.tokens[key];
-  });
+  const markets = Object.values<MarketConfiguration>(configuration.markets);
+  const tokens = Object.values<TokenConfiguration>(configuration.tokens);
 
   const consumeEventsLimit = new BN('10');
   const maxUniqueAccounts = parseInt('10');
@@ -40,19 +45,19 @@ async function crank() {
   const feeTokenAccounts = new Map<string, PublicKey>();
 
   const tokenAccounts = await Promise.all(
-    tokens.map(async token => {
-      return [
-        token,
-        await getAssociatedTokenAddress(
-          new PublicKey(token.mint),
+    tokens.map(async (tokenConfiguration: TokenConfiguration) => {
+      return {
+        tokenConfiguration: tokenConfiguration,
+        tokenAccount: await getAssociatedTokenAddress(
+          tokenConfiguration.mint,
           payer.publicKey,
         ),
-      ];
+      };
     }),
   );
 
-  tokenAccounts.forEach(([token, tokenAccount]) => {
-    feeTokenAccounts.set(token.mint, tokenAccount);
+  tokenAccounts.forEach(({ tokenConfiguration, tokenAccount }) => {
+    feeTokenAccounts.set(tokenConfiguration.mint.toBase58(), tokenAccount);
   });
 
   const interval = 1000;
@@ -123,8 +128,8 @@ async function crank() {
                 DexInstructions.consumeEvents({
                   market: new PublicKey(market.market),
                   eventQueue: new PublicKey(market.eventQueue),
-                  coinFee: feeTokenAccounts.get(market.baseMint),
-                  pcFee: feeTokenAccounts.get(market.quoteMint),
+                  coinFee: feeTokenAccounts.get(market.baseMint.toBase58()),
+                  pcFee: feeTokenAccounts.get(market.quoteMint.toBase58()),
                   openOrdersAccounts,
                   limit: consumeEventsLimit,
                   programId: serumProgramId,

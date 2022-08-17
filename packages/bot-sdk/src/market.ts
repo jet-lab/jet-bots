@@ -9,29 +9,29 @@ import {
   Account,
   AccountInfo,
   Commitment,
-  Connection,
   Context as SolanaContext,
   PublicKey,
-  sendAndConfirmTransaction,
   Transaction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
 import { Configuration, MarketConfiguration } from './configuration';
+import { Connection } from './connection';
 import { Position } from './position';
 
 export interface Order {
   symbol: string;
   clientId: BN;
-  side: 'buy' | 'sell';
-  price: number;
-  size: number;
   orderType?: 'limit' | 'ioc' | 'postOnly';
+  price: number;
   selfTradeBehavior:
     | 'decrementTake'
     | 'cancelProvide'
     | 'abortTransaction'
     | undefined;
+  side: 'buy' | 'sell';
+  size: number;
+  tokenAccount: PublicKey;
 }
 
 export class Market {
@@ -112,10 +112,9 @@ export class Market {
       }
     }
     if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(connection, transaction, [
+      const txid = await connection.sendAndConfirmTransaction(transaction, [
         owner,
       ]);
-      console.log(txid);
     }
   }
 
@@ -157,12 +156,10 @@ export class Market {
     }
 
     if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(
-        connection,
+      const txid = await connection.sendAndConfirmTransaction(
         transaction,
         signers,
       );
-      console.log(txid);
     }
 
     const openOrdersAccounts = await connection.getMultipleAccountsInfo(
@@ -300,10 +297,9 @@ export class Market {
       }
     }
     if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(connection, transaction, [
+      const txid = await connection.sendAndConfirmTransaction(transaction, [
         owner,
       ]);
-      console.log(txid);
     }
   }
 }

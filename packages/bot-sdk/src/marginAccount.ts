@@ -1,5 +1,6 @@
 import { BN } from '@project-serum/anchor';
 import { DexInstructions } from '@project-serum/serum';
+import { ORDERBOOK_LAYOUT } from '@project-serum/serum/lib/market';
 import {
   AccountLayout,
   createCloseAccountInstruction,
@@ -9,11 +10,8 @@ import {
   Account,
   AccountInfo,
   Commitment,
-  Connection,
   Context,
   LAMPORTS_PER_SOL,
-  PublicKey,
-  sendAndConfirmTransaction,
   Transaction,
 } from '@solana/web3.js';
 import assert from 'assert';
@@ -24,17 +22,17 @@ import {
   MarketConfiguration,
   TokenConfiguration,
 } from './configuration';
+import { Connection } from './connection';
 import { Market, Order } from './market';
 import { Position } from './position';
 
 export class MarginAccount {
-  //address: PublicKey;
+  //address: PublicKey; //TODO
   configuration: Configuration;
   connection: Connection;
-  //delegate?: Account;
+  //delegate?: Account; //TODO
   owner?: Account;
-  payer: Account;
-  serumProgramId: PublicKey;
+  payer?: Account;
   symbols?: string[];
 
   // Populated after load.
@@ -46,21 +44,26 @@ export class MarginAccount {
   // Populated after listen.
   listening: boolean = false;
 
-  constructor(cluster: string, keyfile: string, symbols?: string[]) {
-    const configuration = new Configuration(cluster, symbols);
-    const connection = new Connection(
-      configuration.url,
+  constructor(cluster: string, keyfile?: string, symbols?: string[]) {
+    this.configuration = new Configuration(cluster, symbols);
+
+    this.connection = new Connection(
+      this.configuration.url,
       'processed' as Commitment,
     );
-    const account = new Account(JSON.parse(fs.readFileSync(keyfile, 'utf-8')));
 
-    //this.address = address;
-    this.configuration = configuration;
-    this.connection = connection;
-    //this.delegate = delegate;
-    this.owner = account;
-    this.payer = account;
-    this.serumProgramId = this.configuration.serumProgramId;
+    if (keyfile) {
+      const account = new Account(
+        JSON.parse(fs.readFileSync(keyfile, 'utf-8')),
+      );
+      this.owner = account;
+      this.payer = account;
+
+      //TODO
+      //this.address = address;
+      //this.delegate = delegate;
+    }
+
     this.symbols = symbols;
   }
 
@@ -79,7 +82,7 @@ export class MarginAccount {
       await Position.createTokenAccounts(
         this.connection,
         this.owner!,
-        this.payer,
+        this.payer!,
         [position],
       );
       assert(position.tokenAccount);
@@ -91,7 +94,7 @@ export class MarginAccount {
     assert(this.positions[symbol]);
     const position = this.positions[symbol];
 
-    await position.airdrop(this.connection, this.payer, amount);
+    await position.airdrop(this.connection, this.payer!, amount);
   }
 
   async cancelOrders(): Promise<void> {
@@ -105,14 +108,17 @@ export class MarginAccount {
         for (let i = 0; i < market.openOrders.orders.length; i++) {
           const orderId = market.openOrders.orders[i];
           if (orderId.gt(ZERO_BN)) {
+            console.log(`isBidBits = ${market.openOrders.isBidBits.testn(i)}`);
+            console.log(`orderId = ${orderId}`);
+            console.log(`clientId = ${market.openOrders.clientIds[i]}`);
             transaction.add(
               DexInstructions.cancelOrderV2({
                 market: market.marketConfiguration.market,
+                owner: this.owner!.publicKey,
+                openOrders: market.openOrders.address,
                 bids: market.marketConfiguration.bids,
                 asks: market.marketConfiguration.asks,
                 eventQueue: market.marketConfiguration.eventQueue,
-                openOrders: market.openOrders.address,
-                owner: this.owner!.publicKey,
                 side: market.openOrders.isBidBits.testn(i) ? 'buy' : 'sell',
                 orderId,
                 openOrdersSlot: i,
@@ -124,12 +130,10 @@ export class MarginAccount {
       }
     }
     if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(
-        this.connection,
+      const txid = await this.connection.sendAndConfirmTransaction(
         transaction,
         [this.owner!],
       );
-      console.log(txid);
     }
   }
 
@@ -155,12 +159,10 @@ export class MarginAccount {
       }
     }
     if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(
-        this.connection,
+      const txid = await this.connection.sendAndConfirmTransaction(
         transaction,
         [this.owner!],
       );
-      console.log(txid);
     }
 
     //TODO close the margin account, transfer the tokens back to the user wallet.
@@ -206,7 +208,7 @@ export class MarginAccount {
     await Position.createTokenAccounts(
       this.connection,
       this.owner!,
-      this.payer,
+      this.payer!,
       Object.values<Position>(this.positions),
     );
   }
@@ -223,7 +225,7 @@ export class MarginAccount {
     assert(!this.listening);
 
     this.connection.onAccountChange(
-      this.payer.publicKey,
+      this.payer!.publicKey,
       (accountInfo: AccountInfo<Buffer>, context: Context) => {
         this.payerBalance = accountInfo.lamports;
       },
@@ -256,7 +258,7 @@ export class MarginAccount {
   async load(): Promise<void> {
     assert(!this.loaded);
 
-    this.payerBalance = await this.connection.getBalance(this.payer.publicKey);
+    this.payerBalance = await this.connection.getBalance(this.payer!.publicKey);
 
     const response = await this.connection.getTokenAccountsByOwner(
       this.owner!.publicKey, //TODO replace account with a trading account, this.address,
@@ -308,11 +310,97 @@ export class MarginAccount {
     await Market.load(
       this.connection,
       this.owner!.publicKey,
-      this.serumProgramId,
+      this.configuration.serumProgramId,
       Object.values<Market>(this.markets),
     );
 
     this.loaded = true;
+  }
+
+  async printAsks(marketName: string, depth: number = 8): Promise<void> {
+    console.log(`${marketName} ASK`);
+
+    const marketConfiguration = this.configuration.markets[marketName];
+    const accountInfo = await this.connection.getAccountInfo(
+      marketConfiguration.asks,
+    );
+    if (accountInfo) {
+      const { accountFlags, slab } = ORDERBOOK_LAYOUT.decode(accountInfo.data);
+      const levels: [BN, BN][] = [];
+      for (const { key, quantity } of slab.items(false)) {
+        const price = key.ushrn(64);
+        if (levels.length > 0 && levels[levels.length - 1][0].eq(price)) {
+          levels[levels.length - 1][1] =
+            levels[levels.length - 1][1].add(quantity);
+        } else if (levels.length === depth) {
+          break;
+        } else {
+          levels.push([price, quantity]);
+        }
+      }
+      levels.forEach(([priceLots, sizeLots]) => {
+        console.log(
+          `  ${priceLotsToNumber(
+            priceLots,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+            marketConfiguration.quoteLotSize,
+            marketConfiguration.quoteDecimals,
+          )}  |  ${baseSizeLotsToNumber(
+            sizeLots,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+          )}`,
+        );
+      });
+    }
+  }
+
+  async printAskOrders(marketName: string, depth: number = 8): Promise<void> {
+    console.log(`${marketName} ASK ORDERS`);
+
+    const marketConfiguration = this.configuration.markets[marketName];
+    const accountInfo = await this.connection.getAccountInfo(
+      marketConfiguration.asks,
+    );
+    if (accountInfo) {
+      const { accountFlags, slab } = ORDERBOOK_LAYOUT.decode(accountInfo.data);
+
+      for (const {
+        key,
+        ownerSlot,
+        owner,
+        quantity,
+        feeTier,
+        clientOrderId,
+      } of slab.items(true)) {
+        const priceLots = key.ushrn(64);
+
+        console.log(`  ORDER`);
+        console.log(`    orderId = ${key}`);
+        console.log(`    owner = ${owner}`);
+        console.log(`    ownerSlot = ${ownerSlot}`);
+        console.log(`    feeTier = ${feeTier}`);
+        console.log(`    clientOrderId = ${clientOrderId}`);
+        console.log(
+          `    price = ${priceLotsToNumber(
+            priceLots,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+            marketConfiguration.quoteLotSize,
+            marketConfiguration.quoteDecimals,
+          )}`,
+        );
+        console.log(
+          `    quantity = ${baseSizeLotsToNumber(
+            quantity,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+          )}`,
+        );
+        console.log('');
+      }
+    }
   }
 
   printBalance(): void {
@@ -337,6 +425,92 @@ export class MarginAccount {
     console.log('');
   }
 
+  async printBids(marketName: string, depth: number = 8): Promise<void> {
+    console.log(`${marketName} BID`);
+
+    const marketConfiguration = this.configuration.markets[marketName];
+    const accountInfo = await this.connection.getAccountInfo(
+      marketConfiguration.bids,
+    );
+    if (accountInfo) {
+      const { accountFlags, slab } = ORDERBOOK_LAYOUT.decode(accountInfo.data);
+      const levels: [BN, BN][] = [];
+      for (const { key, quantity } of slab.items(true)) {
+        const price = key.ushrn(64);
+        if (levels.length > 0 && levels[levels.length - 1][0].eq(price)) {
+          levels[levels.length - 1][1] =
+            levels[levels.length - 1][1].add(quantity);
+        } else if (levels.length === depth) {
+          break;
+        } else {
+          levels.push([price, quantity]);
+        }
+      }
+      levels.forEach(([priceLots, sizeLots]) => {
+        console.log(
+          `  ${priceLotsToNumber(
+            priceLots,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+            marketConfiguration.quoteLotSize,
+            marketConfiguration.quoteDecimals,
+          )}  |  ${baseSizeLotsToNumber(
+            sizeLots,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+          )}`,
+        );
+      });
+    }
+  }
+
+  async printBidOrders(marketName: string, depth: number = 8): Promise<void> {
+    console.log(`${marketName} BID ORDERS`);
+
+    const marketConfiguration = this.configuration.markets[marketName];
+    const accountInfo = await this.connection.getAccountInfo(
+      marketConfiguration.bids,
+    );
+    if (accountInfo) {
+      const { accountFlags, slab } = ORDERBOOK_LAYOUT.decode(accountInfo.data);
+
+      for (const {
+        key,
+        ownerSlot,
+        owner,
+        quantity,
+        feeTier,
+        clientOrderId,
+      } of slab.items(true)) {
+        const priceLots = key.ushrn(64);
+
+        console.log(`  ORDER`);
+        console.log(`    orderId = ${key}`);
+        console.log(`    owner = ${owner}`);
+        console.log(`    ownerSlot = ${ownerSlot}`);
+        console.log(`    feeTier = ${feeTier}`);
+        console.log(`    clientOrderId = ${clientOrderId}`);
+        console.log(
+          `    price = ${priceLotsToNumber(
+            priceLots,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+            marketConfiguration.quoteLotSize,
+            marketConfiguration.quoteDecimals,
+          )}`,
+        );
+        console.log(
+          `    quantity = ${baseSizeLotsToNumber(
+            quantity,
+            marketConfiguration.baseLotSize,
+            marketConfiguration.baseDecimals,
+          )}`,
+        );
+        console.log('');
+      }
+    }
+  }
+
   printOpenOrders(): void {
     assert(this.loaded);
     for (const market of Object.values<Market>(this.markets)) {
@@ -344,7 +518,13 @@ export class MarginAccount {
       if (market.openOrders) {
         console.log(`  address = ${market.openOrders.address}`);
         console.log(
+          `  baseTokenTotal = ${market.openOrders.baseTokenTotal.toNumber()}`,
+        );
+        console.log(
           `  baseTokenFree = ${market.openOrders.baseTokenFree.toNumber()}`,
+        );
+        console.log(
+          `  quoteTokenTotal = ${market.openOrders.quoteTokenTotal.toNumber()}`,
         );
         console.log(
           `  quoteTokenFree = ${market.openOrders.quoteTokenFree.toNumber()}`,
@@ -355,7 +535,7 @@ export class MarginAccount {
 
         for (let i = 0; i < market.openOrders.orders.length; i++) {
           const orderId = market.openOrders.orders[i];
-          if (orderId.gt(ZERO_BN)) {
+          if (orderId.gt(ZERO_BN) && !market.openOrders.freeSlotBits.testn(i)) {
             console.log(
               `  openOrdersSlot = ${i}, orderId = ${orderId}, side = ${
                 market.openOrders.isBidBits.testn(i) ? 'buy' : 'sell'
@@ -418,18 +598,18 @@ export class MarginAccount {
               transaction.add(
                 market.market!.makeNewOrderV3Instruction({
                   owner: this.owner!,
-                  payer: this.payer.publicKey,
+                  payer: order.tokenAccount,
                   side: order.side,
                   price: order.price,
                   size: order.size,
                   orderType: order.orderType,
                   clientId: order.clientId,
                   openOrdersAddressKey: market.openOrders!.address,
-                  //feeDiscountPubkey,
+                  feeDiscountPubkey: null, //TODO
                   selfTradeBehavior: order.selfTradeBehavior,
-                  programId: market.market?.programId,
+                  programId: market.market!.programId,
                   //maxTs,
-                  replaceIfExists: true,
+                  //replaceIfExists,
                 }),
               );
             }
@@ -439,16 +619,10 @@ export class MarginAccount {
         }
 
         if (transaction.instructions.length > 0) {
-          const txid = await sendAndConfirmTransaction(
-            this.connection,
-            transaction,
-            [this.payer],
-            {
-              skipPreflight: true,
-              commitment: 'processed',
-            },
-          );
-          console.log(txid);
+          this.connection.sendAndConfirmTransaction(transaction, [
+            this.owner!,
+            this.payer!,
+          ]);
         }
       } catch (err) {
         console.log(`ERROR: ${JSON.stringify(err)}`);
@@ -479,11 +653,12 @@ export class MarginAccount {
         {
           symbol: marketName,
           clientId: new BN(Date.now()),
-          side: 'sell',
-          price,
-          size,
           orderType: 'limit',
+          price,
           selfTradeBehavior: 'abortTransaction',
+          side: 'sell',
+          size,
+          tokenAccount: position.tokenAccount!,
         },
       ]);
     } else if (
@@ -494,11 +669,12 @@ export class MarginAccount {
         {
           symbol: marketName,
           clientId: new BN(Date.now()),
-          side: 'buy',
-          price,
-          size,
           orderType: 'limit',
+          price,
           selfTradeBehavior: 'abortTransaction',
+          side: 'buy',
+          size,
+          tokenAccount: position.tokenAccount!,
         },
       ]);
     } else {
@@ -537,4 +713,45 @@ export class MarginAccount {
     //TODO
     throw new Error('Implement');
   }
+}
+
+function baseSizeLotsToNumber(
+  size: BN,
+  baseLotSize: number,
+  baseSplTokenDecimals: number,
+) {
+  return divideBnToNumber(
+    size.mul(new BN(baseLotSize)),
+    baseSplTokenMultiplier(baseSplTokenDecimals),
+  );
+}
+
+function priceLotsToNumber(
+  price: BN,
+  baseLotSize: number,
+  baseSplTokenDecimals: number,
+  quoteLotSize: number,
+  quoteSplTokenDecimals: number,
+) {
+  return divideBnToNumber(
+    price
+      .mul(new BN(quoteLotSize))
+      .mul(baseSplTokenMultiplier(baseSplTokenDecimals)),
+    new BN(baseLotSize).mul(quoteSplTokenMultiplier(quoteSplTokenDecimals)),
+  );
+}
+
+function baseSplTokenMultiplier(baseSplTokenDecimals: number) {
+  return new BN(10).pow(new BN(baseSplTokenDecimals));
+}
+
+function quoteSplTokenMultiplier(quoteSplTokenDecimals: number) {
+  return new BN(10).pow(new BN(quoteSplTokenDecimals));
+}
+
+function divideBnToNumber(numerator: BN, denominator: BN): number {
+  const quotient = numerator.div(denominator).toNumber();
+  const rem = numerator.umod(denominator);
+  const gcd = rem.gcd(denominator);
+  return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber();
 }

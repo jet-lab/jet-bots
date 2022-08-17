@@ -9,17 +9,16 @@ import {
   Account,
   AccountInfo,
   Commitment,
-  Connection,
   Context,
   Keypair,
   PublicKey,
-  sendAndConfirmTransaction,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
 import { Configuration, TokenConfiguration } from './configuration';
+import { Connection } from './connection';
 
 export class Position {
   configuration: Configuration;
@@ -88,11 +87,11 @@ export class Position {
       }
     }
     if (transaction.instructions.length > 0) {
-      const txid = await sendAndConfirmTransaction(
-        connection,
+      const txid = await connection.sendAndConfirmTransaction(
         transaction,
         [payer],
-        { commitment: 'processed' },
+        undefined,
+        'processed',
       );
       console.log(txid);
     }
@@ -151,14 +150,13 @@ const airdropTokens = async (
       keys,
     }),
   );
-  const txid = await sendAndConfirmTransaction(
-    connection,
+  const txid = await connection.sendAndConfirmTransaction(
     tx,
     [feePayerAccount],
     {
       skipPreflight: false,
-      commitment: 'singleGossip',
     },
+    'singleGossip',
   );
 };
 

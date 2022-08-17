@@ -45,6 +45,22 @@ async function run() {
       await marginAccount.load();
       await marginAccount.airdrop(argv.s, argv.a);
     },
+    asks: async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        m: { alias: 'market', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c);
+      await marginAccount.printAsks(argv.m);
+    },
+    'ask-orders': async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        m: { alias: 'market', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c);
+      await marginAccount.printAskOrders(argv.m);
+    },
     balance: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
@@ -53,6 +69,22 @@ async function run() {
       const marginAccount = new MarginAccount(argv.c, argv.k);
       await marginAccount.load();
       marginAccount.printBalance();
+    },
+    bids: async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        m: { alias: 'market', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c);
+      await marginAccount.printBids(argv.m);
+    },
+    'bid-orders': async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        m: { alias: 'market', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c);
+      await marginAccount.printBidOrders(argv.m);
     },
     'cancel-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
