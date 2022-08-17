@@ -4,20 +4,16 @@ import {
   Market as SerumMarket,
   OpenOrders,
 } from '@project-serum/serum';
-import { encodeInstruction } from '@project-serum/serum/lib/instructions';
 import { MARKET_STATE_LAYOUT_V2 } from '@project-serum/serum/lib/market';
 import {
   Account,
   AccountInfo,
-  AccountMeta,
   Commitment,
   Connection,
   Context as SolanaContext,
   PublicKey,
   sendAndConfirmTransaction,
-  SYSVAR_RENT_PUBKEY,
   Transaction,
-  TransactionInstruction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
@@ -38,73 +34,25 @@ export interface Order {
 }
 
 export class Market {
+  configuration: Configuration;
+  marketConfiguration: MarketConfiguration;
   market?: SerumMarket;
-  marketConfig: MarketConfiguration;
 
   basePosition: Position;
   quotePosition: Position;
   openOrders?: OpenOrders;
 
   constructor(
-    marketConfig: MarketConfiguration,
+    configuration: Configuration,
+    marketConfiguration: MarketConfiguration,
     positions: Record<string, Position>,
   ) {
-    this.marketConfig = marketConfig;
-    assert(positions[this.marketConfig.baseSymbol]);
-    this.basePosition = positions[this.marketConfig.baseSymbol];
-    assert(positions[this.marketConfig.quoteSymbol]);
-    this.quotePosition = positions[this.marketConfig.quoteSymbol];
-  }
-
-  static async load(
-    connection: Connection,
-    owner: PublicKey,
-    programId: PublicKey,
-    markets: Market[],
-  ): Promise<void> {
-    const publicKeys: PublicKey[] = markets.map(market => {
-      assert(market.marketConfig.market);
-      return new PublicKey(market.marketConfig.market);
-    });
-    const accounts = await connection.getMultipleAccountsInfo(publicKeys);
-    for (let i = 0; i < markets.length; i++) {
-      if (accounts[i]) {
-        const decoded = MARKET_STATE_LAYOUT_V2.decode(accounts[i]!.data);
-        assert(markets[i].marketConfig.baseDecimals);
-        assert(markets[i].marketConfig.quoteDecimals);
-        markets[i].market = new SerumMarket(
-          decoded,
-          markets[i].marketConfig.baseDecimals,
-          markets[i].marketConfig.quoteDecimals,
-          {},
-          programId,
-        );
-      }
-    }
-
-    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
-      connection,
-      owner,
-      programId,
-    );
-
-    for (const openOrdersAccount of openOrdersAccounts) {
-      const openOrders = OpenOrders.fromAccountInfo(
-        openOrdersAccount.publicKey,
-        openOrdersAccount.accountInfo,
-        programId,
-      );
-
-      const market = markets.find(markets => {
-        return (
-          markets.marketConfig.market.toBase58() == openOrders.market.toBase58()
-        );
-      });
-
-      if (market) {
-        market.openOrders = openOrders;
-      }
-    }
+    this.configuration = configuration;
+    this.marketConfiguration = marketConfiguration;
+    assert(positions[this.marketConfiguration.baseSymbol]);
+    this.basePosition = positions[this.marketConfiguration.baseSymbol];
+    assert(positions[this.marketConfiguration.quoteSymbol]);
+    this.quotePosition = positions[this.marketConfiguration.quoteSymbol];
   }
 
   static async closeOpenOrders(
@@ -175,14 +123,13 @@ export class Market {
     connection: Connection,
     owner: Account,
     markets: Market[],
-    listening: boolean,
   ): Promise<void> {
     const publicKeys: PublicKey[] = [];
     const transaction = new Transaction();
     const signers: Account[] = [];
 
     for (const market of markets) {
-      assert(market.marketConfig);
+      assert(market.marketConfiguration);
       assert(market.market);
       if (!market.openOrders) {
         const openOrdersAccount = new Account();
@@ -239,58 +186,126 @@ export class Market {
     //TODO if already listening, start listening to these accounts.
   }
 
-  async listenOpenOrders(connection: Connection): Promise<void> {
-    console.log(`Listening to OpenOrders for ${this.marketConfig.symbol}`);
+  async listenOpenOrders(
+    configuration: Configuration,
+    connection: Connection,
+  ): Promise<void> {
+    console.log(
+      `Listening to OpenOrders for ${this.marketConfiguration.symbol}`,
+    );
     assert(this.openOrders);
     connection.onAccountChange(
       this.openOrders.address,
       (accountInfo: AccountInfo<Buffer>, context: SolanaContext) => {
-        //TODO
+        assert(this.openOrders);
+        this.openOrders = OpenOrders.fromAccountInfo(
+          this.openOrders.address,
+          accountInfo,
+          configuration.serumProgramId,
+        );
       },
       'confirmed' as Commitment,
     );
-    /*
-    if (
-      openOrders.baseTokenFree.gt(new BN(0)) ||
-      openOrders.quoteTokenFree.gt(new BN(0))
-    ) {
-      await context.bots[i].positions[symbol].settleFunds();
-    }
-    */
   }
 
-  //TODO do this in a batch.
-  async settleFunds() {
-    throw new Error('Implement.');
+  static async load(
+    connection: Connection,
+    owner: PublicKey,
+    programId: PublicKey,
+    markets: Market[],
+  ): Promise<void> {
+    const publicKeys: PublicKey[] = markets.map(market => {
+      assert(market.marketConfiguration.market);
+      return new PublicKey(market.marketConfiguration.market);
+    });
+    const accounts = await connection.getMultipleAccountsInfo(publicKeys);
+    for (let i = 0; i < markets.length; i++) {
+      if (accounts[i]) {
+        const decoded = MARKET_STATE_LAYOUT_V2.decode(accounts[i]!.data);
+        assert(markets[i].marketConfiguration.baseDecimals);
+        assert(markets[i].marketConfiguration.quoteDecimals);
+        markets[i].market = new SerumMarket(
+          decoded,
+          markets[i].marketConfiguration.baseDecimals,
+          markets[i].marketConfiguration.quoteDecimals,
+          {},
+          programId,
+        );
+      }
+    }
 
-    /*
-    // @ts-ignore
-    const vaultSigner = await PublicKey.createProgramAddress(
-      [
-        this.market.address.toBuffer(),
-        this.market.decoded.vaultSignerNonce.toArrayLike(Buffer, 'le', 8),
-      ],
-      this.market.programId,
+    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+      connection,
+      owner,
+      programId,
     );
 
-    const transaction = new Transaction().add(
-      DexInstructions.settleFunds({
-        market: this.market.address,
-        openOrders: this.openOrdersAccount,
-        owner: this.account.publicKey,
-        baseVault: this.market.decoded.baseVault,
-        quoteVault: this.market.decoded.quoteVault,
-        baseWallet: this.baseTokenAccount,
-        quoteWallet: this.quoteTokenAccount,
-        vaultSigner,
-        programId: this.market.programId,
-        referrerQuoteWallet: this.quoteTokenAccount,
-      }),
-    );
-    const txid = await sendAndConfirmTransaction(this.connection, transaction, [
-      this.account,
-    ]);
-    */
+    for (const openOrdersAccount of openOrdersAccounts) {
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
+        programId,
+      );
+
+      const market = markets.find(markets => {
+        return (
+          markets.marketConfiguration.market.toBase58() ==
+          openOrders.market.toBase58()
+        );
+      });
+
+      if (market) {
+        market.openOrders = openOrders;
+      }
+    }
+  }
+
+  static async settleFunds(
+    connection: Connection,
+    owner: Account,
+    markets: Market[],
+  ) {
+    const transaction = new Transaction();
+    for (const market of markets) {
+      if (market.openOrders) {
+        if (
+          market.openOrders.baseTokenFree.gt(new BN(0)) ||
+          market.openOrders.quoteTokenFree.gt(new BN(0))
+        ) {
+          const vaultSigner = await PublicKey.createProgramAddress(
+            [
+              market.market!.address.toBuffer(),
+              market.market!.decoded.vaultSignerNonce.toArrayLike(
+                Buffer,
+                'le',
+                8,
+              ),
+            ],
+            market.market!.programId,
+          );
+          transaction.add(
+            DexInstructions.settleFunds({
+              market: market.market!.address,
+              openOrders: market.openOrders!.address,
+              owner: owner.publicKey,
+              baseVault: market.market!.decoded.baseVault,
+              quoteVault: market.market!.decoded.quoteVault,
+              baseWallet: market.basePosition.tokenAccount,
+              quoteWallet: market.quotePosition.tokenAccount,
+              vaultSigner,
+              programId: market.market!.programId,
+              referrerQuoteWallet: market.quotePosition.tokenAccount,
+            }),
+          );
+        }
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      const txid = await sendAndConfirmTransaction(connection, transaction, [
+        owner,
+      ]);
+      console.log(txid);
+    }
   }
 }
 

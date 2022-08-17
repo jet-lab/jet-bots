@@ -96,6 +96,15 @@ async function run() {
       await marginAccount.load();
       await marginAccount.createOpenOrders();
     },
+    'create-token-accounts': async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c, argv.k);
+      await marginAccount.load();
+      await marginAccount.createTokenAccounts();
+    },
     deposit: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         a: { alias: 'amount', required: true, type: 'number' },
@@ -126,6 +135,15 @@ async function run() {
       await marginAccount.load();
       marginAccount.printOpenOrders();
     },
+    'send-test-orders': async () => {
+      const argv = await yargs(process.argv.slice(3)).options({
+        c: { alias: 'cluster', required: true, type: 'string' },
+        k: { alias: 'keyfile', required: true, type: 'string' },
+      }).argv;
+      const marginAccount = new MarginAccount(argv.c, argv.k);
+      await marginAccount.load();
+      marginAccount.sendTestOrders();
+    },
     'settle-funds': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
@@ -152,7 +170,9 @@ async function run() {
   if (!command || !commands[command]) {
     console.log(`Unknown command: ${command}.`);
   } else {
+    console.log('');
     console.log(`jet ${command}`);
+    console.log('');
     commands[command]();
   }
 }

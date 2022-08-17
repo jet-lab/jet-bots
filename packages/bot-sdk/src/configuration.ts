@@ -72,6 +72,7 @@ export class TokenConfiguration {
 }
 
 export class Configuration {
+  cluster: string;
   orcaSwapProgramId: PublicKey;
   pythProgramId: PublicKey;
   serumProgramId: PublicKey;
@@ -89,6 +90,7 @@ export class Configuration {
         ? loadConfig(cluster)
         : filterConfig(loadConfig(cluster), symbols);
 
+    this.cluster = config.cluster;
     this.orcaSwapProgramId = new PublicKey(config.orcaSwapProgramId);
     this.pythProgramId = new PublicKey(config.pythProgramId);
     this.serumProgramId = new PublicKey(config.serumProgramId);
@@ -138,18 +140,18 @@ function loadConfig(cluster: string): any {
     case 'd':
     case 'devnet': {
       assert(CONFIG.devnet);
-      return CONFIG.devnet;
+      return { cluster: 'devnet', ...CONFIG.devnet };
     }
     case 'l':
     case 'localnet': {
       assert(CONFIG.localnet);
-      return CONFIG.localnet;
+      return { cluster: 'localnet', ...CONFIG.localnet };
     }
     case 'm':
     case 'mainnet':
     case 'mainnet-beta': {
       assert(CONFIG['mainnet-beta']);
-      return CONFIG['mainnet-beta'];
+      return { cluster: 'mainnet-beta', ...CONFIG['mainnet-beta'] };
     }
     default: {
       throw new Error(`Invalid cluster: ${cluster}`);
