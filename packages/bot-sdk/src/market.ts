@@ -21,17 +21,12 @@ import { Position } from './position';
 
 export interface Order {
   symbol: string;
-  clientId: BN;
+  clientId?: BN;
   orderType?: 'limit' | 'ioc' | 'postOnly';
   price: number;
-  selfTradeBehavior:
-    | 'decrementTake'
-    | 'cancelProvide'
-    | 'abortTransaction'
-    | undefined;
+  selfTradeBehavior?: 'decrementTake' | 'cancelProvide' | 'abortTransaction';
   side: 'buy' | 'sell';
   size: number;
-  tokenAccount: PublicKey;
 }
 
 export class Market {

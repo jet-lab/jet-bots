@@ -595,10 +595,16 @@ export class MarginAccount {
               );
               console.log('invalid price');
             } else {
+              assert(market.basePosition.tokenAccount);
+              assert(market.quotePosition.tokenAccount);
+              const tokenAccount =
+                order.side == 'buy'
+                  ? market.quotePosition.tokenAccount
+                  : market.basePosition.tokenAccount;
               transaction.add(
                 market.market!.makeNewOrderV3Instruction({
                   owner: this.owner!,
-                  payer: order.tokenAccount,
+                  payer: tokenAccount,
                   side: order.side,
                   price: order.price,
                   size: order.size,
@@ -658,7 +664,6 @@ export class MarginAccount {
           selfTradeBehavior: 'abortTransaction',
           side: 'sell',
           size,
-          tokenAccount: position.tokenAccount!,
         },
       ]);
     } else if (
@@ -674,7 +679,6 @@ export class MarginAccount {
           selfTradeBehavior: 'abortTransaction',
           side: 'buy',
           size,
-          tokenAccount: position.tokenAccount!,
         },
       ]);
     } else {
