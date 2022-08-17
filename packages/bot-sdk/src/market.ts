@@ -22,6 +22,7 @@ import { Position } from './position';
 
 export interface Order {
   symbol: string;
+  clientId: BN;
   side: 'buy' | 'sell';
   price: number;
   size: number;
@@ -182,8 +183,6 @@ export class Market {
         );
       }
     }
-
-    //TODO if already listening, start listening to these accounts.
   }
 
   async listenOpenOrders(

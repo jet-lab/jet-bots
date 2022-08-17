@@ -1,9 +1,8 @@
 import { BN } from '@project-serum/anchor';
+import { DexInstructions } from '@project-serum/serum';
 import {
   AccountLayout,
-  createAssociatedTokenAccountInstruction,
   createCloseAccountInstruction,
-  getAssociatedTokenAddress,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import {
@@ -92,29 +91,52 @@ export class MarginAccount {
     assert(this.positions[symbol]);
     const position = this.positions[symbol];
 
-    await position.airdrop(this.connection, amount);
+    await position.airdrop(this.connection, this.payer, amount);
   }
 
-  cancelOrders(): void {
+  async cancelOrders(): Promise<void> {
     assert(this.loaded);
 
-    for (const market of Object.values<Market>(this.markets)) {
-      /*
-      const openOrders = await market.loadOrdersForOwner(
-        this.context.connection,
-        this.context.account!.publicKey,
-      );
-      for (const openOrder of openOrders) {
-        await market.cancelOrder(this.context.connection, this.context.account!, openOrder);
-      }
-      */
-    }
+    const ZERO_BN = new BN(0);
 
-    throw new Error('Implement.');
+    const transaction = new Transaction();
+    for (const market of Object.values<Market>(this.markets)) {
+      if (market.openOrders) {
+        for (let i = 0; i < market.openOrders.orders.length; i++) {
+          const orderId = market.openOrders.orders[i];
+          if (orderId.gt(ZERO_BN)) {
+            transaction.add(
+              DexInstructions.cancelOrderV2({
+                market: market.marketConfiguration.market,
+                bids: market.marketConfiguration.bids,
+                asks: market.marketConfiguration.asks,
+                eventQueue: market.marketConfiguration.eventQueue,
+                openOrders: market.openOrders.address,
+                owner: this.owner!.publicKey,
+                side: market.openOrders.isBidBits.testn(i) ? 'buy' : 'sell',
+                orderId,
+                openOrdersSlot: i,
+                programId: this.configuration.serumProgramId,
+              }),
+            );
+          }
+        }
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      const txid = await sendAndConfirmTransaction(
+        this.connection,
+        transaction,
+        [this.owner!],
+      );
+      console.log(txid);
+    }
   }
 
   async closeMarginAccount(): Promise<void> {
     assert(this.loaded);
+
+    await this.cancelOrders();
 
     await this.settleFunds();
 
@@ -320,14 +342,35 @@ export class MarginAccount {
     for (const market of Object.values<Market>(this.markets)) {
       console.log(market.marketConfiguration.symbol);
       if (market.openOrders) {
-        console.log(`  ${market.openOrders.address}`);
-        //TODO list any orders in the open orders account.
+        console.log(`  address = ${market.openOrders.address}`);
+        console.log(
+          `  baseTokenFree = ${market.openOrders.baseTokenFree.toNumber()}`,
+        );
+        console.log(
+          `  quoteTokenFree = ${market.openOrders.quoteTokenFree.toNumber()}`,
+        );
+        console.log('');
+
+        const ZERO_BN = new BN(0);
+
+        for (let i = 0; i < market.openOrders.orders.length; i++) {
+          const orderId = market.openOrders.orders[i];
+          if (orderId.gt(ZERO_BN)) {
+            console.log(
+              `  openOrdersSlot = ${i}, orderId = ${orderId}, side = ${
+                market.openOrders.isBidBits.testn(i) ? 'buy' : 'sell'
+              }`,
+            );
+          }
+        }
       }
       console.log('');
     }
   }
 
   sendOrders(orders: Order[]): void {
+    assert(this.loaded);
+
     (async () => {
       try {
         const transaction = new Transaction();
@@ -342,11 +385,14 @@ export class MarginAccount {
                 this.owner!,
                 [market],
               );
-              await market.listenOpenOrders(
-                this.configuration,
-                this.connection,
-              );
+              if (this.listening) {
+                await market.listenOpenOrders(
+                  this.configuration,
+                  this.connection,
+                );
+              }
             }
+            assert(market.openOrders);
 
             if (
               market.market!.baseSizeNumberToLots(order.size).lte(new BN(0))
@@ -369,31 +415,23 @@ export class MarginAccount {
               );
               console.log('invalid price');
             } else {
-              //TODO replace existing orders.
-              //replaceOrdersByClientIds
-
-              //TODO send the orders.
-              //owner: this.account,
-              //payer: this.context.positions[symbol].quoteTokenAccount,
-              //clientId: undefined,
-              //openOrdersAddressKey: this.context.positions[symbol].openOrdersAccount,
-              //feeDiscountPubkey: this.feeDiscountPubkey,
-
-              market.market!.makeNewOrderV3Instruction({
-                owner: this.owner!,
-                // @ts-ignore
-                payer: this.payer,
-                side: order.side,
-                price: order.price,
-                size: order.size,
-                orderType: order.orderType,
-                clientId: new BN(Date.now()),
-                //openOrdersAddressKey,
-                //openOrdersAccount,
-                //feeDiscountPubkey,
-                //maxTs,
-                //replaceIfExists,
-              });
+              transaction.add(
+                market.market!.makeNewOrderV3Instruction({
+                  owner: this.owner!,
+                  payer: this.payer.publicKey,
+                  side: order.side,
+                  price: order.price,
+                  size: order.size,
+                  orderType: order.orderType,
+                  clientId: order.clientId,
+                  openOrdersAddressKey: market.openOrders!.address,
+                  //feeDiscountPubkey,
+                  selfTradeBehavior: order.selfTradeBehavior,
+                  programId: market.market?.programId,
+                  //maxTs,
+                  replaceIfExists: true,
+                }),
+              );
             }
           } else {
             console.log(`Unknown market: ${order.symbol}`);
@@ -412,20 +450,62 @@ export class MarginAccount {
           );
           console.log(txid);
         }
-      } catch (err) {}
+      } catch (err) {
+        console.log(`ERROR: ${JSON.stringify(err)}`);
+      }
     })();
   }
 
-  sendTestOrders(): void {
-    assert(this.configuration.cluster == 'devnet');
+  sendTestOrder(
+    marketName: string,
+    token: string,
+    price: number,
+    size: number,
+  ): void {
+    assert(
+      this.configuration.cluster == 'devnet' ||
+        this.configuration.cluster == 'localnet',
+    );
     assert(this.loaded);
 
-    //TODO
-    //this.sendOrders(orders);
+    const market = this.markets[marketName];
+    const position = this.positions[token];
 
-    //TODO cancel one order.
-
-    //TODO replaceOrders();
+    if (
+      position.tokenConfiguration.symbol ==
+      market.marketConfiguration.baseSymbol
+    ) {
+      this.sendOrders([
+        {
+          symbol: marketName,
+          clientId: new BN(Date.now()),
+          side: 'sell',
+          price,
+          size,
+          orderType: 'limit',
+          selfTradeBehavior: 'abortTransaction',
+        },
+      ]);
+    } else if (
+      position.tokenConfiguration.symbol ==
+      market.marketConfiguration.quoteSymbol
+    ) {
+      this.sendOrders([
+        {
+          symbol: marketName,
+          clientId: new BN(Date.now()),
+          side: 'buy',
+          price,
+          size,
+          orderType: 'limit',
+          selfTradeBehavior: 'abortTransaction',
+        },
+      ]);
+    } else {
+      throw new Error(
+        `Token '${token}' does not belong to market '${marketName}'.`,
+      );
+    }
   }
 
   async setLimits(

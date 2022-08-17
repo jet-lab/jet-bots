@@ -61,7 +61,7 @@ async function run() {
       }).argv;
       const marginAccount = new MarginAccount(argv.c, argv.k);
       await marginAccount.load();
-      marginAccount.cancelOrders();
+      await marginAccount.cancelOrders();
     },
     close: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -135,14 +135,18 @@ async function run() {
       await marginAccount.load();
       marginAccount.printOpenOrders();
     },
-    'send-test-orders': async () => {
+    'send-test-order': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        m: { alias: 'market', required: true, type: 'string' },
+        p: { alias: 'price', required: true, type: 'number' },
+        s: { alias: 'size', required: true, type: 'number' },
+        t: { alias: 'token', required: true, type: 'string' },
       }).argv;
       const marginAccount = new MarginAccount(argv.c, argv.k);
       await marginAccount.load();
-      marginAccount.sendTestOrders();
+      marginAccount.sendTestOrder(argv.m, argv.t, argv.p, argv.s);
     },
     'settle-funds': async () => {
       const argv = await yargs(process.argv.slice(3)).options({

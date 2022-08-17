@@ -44,7 +44,11 @@ export class Position {
     this.balance = balance;
   }
 
-  async airdrop(connection: Connection, amount: number): Promise<void> {
+  async airdrop(
+    connection: Connection,
+    payer: Account,
+    amount: number,
+  ): Promise<void> {
     assert(this.configuration.splTokenFaucet);
     assert(this.tokenConfiguration.faucet);
     assert(this.tokenAccount);
@@ -53,7 +57,7 @@ export class Position {
       connection,
       this.configuration.splTokenFaucet,
       // @ts-ignore
-      this.payer,
+      payer,
       new PublicKey(this.tokenConfiguration.faucet),
       this.tokenAccount,
       new BN(amount * 10 ** this.tokenConfiguration.decimals),
@@ -81,8 +85,6 @@ export class Position {
             new PublicKey(position.tokenConfiguration.mint),
           ),
         );
-
-        //TODO listen
       }
     }
     if (transaction.instructions.length > 0) {
