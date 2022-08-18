@@ -1,6 +1,7 @@
 #!/usr/bin/env ts-node
 
 import { createBot } from './bots';
+import { Crank } from './bots/crank';
 import { Context } from './context';
 
 function sleep(ms: number) {
@@ -17,6 +18,7 @@ class Controller {
 
       this.isRunning = false;
 
+      /*
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
@@ -27,8 +29,7 @@ class Controller {
       } catch (err) {
         console.log(JSON.stringify(err));
       }
-      /*
-       */
+      */
 
       console.log(`MARKET MAKER EXITED`);
 
@@ -48,34 +49,44 @@ class Controller {
 }
 
 async function run() {
-  const context = new Context();
+  const marginAccountContext = new Context();
 
-  const mainnetContext = new Context({
+  const marketDataContext = new Context({
     cluster: 'mainnet-beta',
-    symbols: context.symbols,
+    symbols: marginAccountContext.symbols,
   });
 
-  await mainnetContext.load();
+  await marketDataContext.load();
 
-  await context.load({
+  await marginAccountContext.load({
     botFactory: createBot,
-    marketDataContext: mainnetContext,
+    marketDataContext,
   });
-  await context.marginAccount!.createTokenAccounts();
-  await context.marginAccount!.createOpenOrders();
+  await marginAccountContext.marginAccount!.createTokenAccounts();
+  await marginAccountContext.marginAccount!.createOpenOrders();
 
-  await mainnetContext.listen();
-  await context.listen();
+  const crank =
+    marginAccountContext.configuration.cluster == 'devnet' ||
+    marginAccountContext.configuration.cluster == 'localnet'
+      ? new Crank(marginAccountContext, marketDataContext)
+      : undefined;
 
-  const controller = new Controller(context);
+  await marketDataContext.listen();
+  await marginAccountContext.listen();
+
+  const controller = new Controller(marginAccountContext);
 
   console.log(`MARKET MAKER RUNNING - Press Ctrl+C to exit.`);
   console.log(``);
 
   while (controller.isRunning) {
     try {
-      if (context.bot) {
-        context.bot.process();
+      if (marginAccountContext.bot) {
+        marginAccountContext.bot.process();
+      }
+
+      if (crank) {
+        crank.process();
       }
     } catch (e) {
       console.log(e);
