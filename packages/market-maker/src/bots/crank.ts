@@ -41,6 +41,7 @@ export class Crank extends Bot {
           if (events.length > 0) {
             const accounts: Set<PublicKey> = new Set();
             for (const event of events) {
+              console.log(`consumeEvents ${event.openOrders}`);
               accounts.add(event.openOrders);
               if (accounts.size >= this.consumeEventsLimit) break;
               const openOrdersAccounts = [...accounts]

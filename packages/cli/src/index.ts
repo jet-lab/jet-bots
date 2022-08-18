@@ -2,7 +2,7 @@
 
 import yargs from 'yargs/yargs';
 
-import { MarginAccount } from '../../bot-sdk/src/';
+import { SolanaMarginAccount as MarginAccount } from '../../bot-sdk/src/';
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -179,7 +179,7 @@ async function run() {
       const marginAccount = new MarginAccount(argv.c, argv.k);
       await marginAccount.load();
       marginAccount.sendTestOrder(argv.m, argv.t, argv.p, argv.s);
-      await marginAccount.crank(argv.m);
+      //TODO await marginAccount.crank(argv.m);
     },
     'settle-funds': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
