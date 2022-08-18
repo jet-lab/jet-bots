@@ -8,20 +8,20 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-//TODO reference this from a dependency.
-import { OracleConfiguration } from '../../bot-sdk/src';
+import { OracleConfiguration } from '../../configuration';
+import { Oracle } from './../oracle';
 
-export class PythOracle {
-  oracleConfig: OracleConfiguration;
-
+export class PythOracle extends Oracle {
+  connection: Connection;
   price?: PriceData;
 
-  constructor(oracleConfig: OracleConfiguration) {
-    this.oracleConfig = oracleConfig;
+  constructor(oracleConfig: OracleConfiguration, connection: Connection) {
+    super(oracleConfig);
+    this.connection = connection;
   }
 
-  async listen(connection: Connection): Promise<void> {
-    connection.onAccountChange(
+  async listen(): Promise<void> {
+    this.connection.onAccountChange(
       new PublicKey(this.oracleConfig.address),
       (accountInfo: AccountInfo<Buffer>, context: Context) => {
         this.price = parsePriceData(accountInfo!.data);

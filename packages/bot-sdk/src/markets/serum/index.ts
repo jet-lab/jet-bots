@@ -11,43 +11,50 @@ import {
 } from '@solana/web3.js';
 import assert from 'assert';
 
-//TODO reference this from a dependency.
-import { MarketConfiguration } from '../../bot-sdk/src';
+import { MarketConfiguration } from '../../configuration';
+import { Market as MarketBase } from '../market';
 
-export class SerumMarket {
-  marketConfig: MarketConfiguration;
-
+export class SerumMarket extends MarketBase {
+  connection: Connection;
   market?: Market;
   asks?: Orderbook;
   bids?: Orderbook;
   events: Event[] = [];
+  eventsAccountInfo?: Buffer;
   seqNum: number = 0;
+  hasEvents: boolean = false;
 
-  constructor(marketConfig: MarketConfiguration) {
-    this.marketConfig = marketConfig;
+  constructor(
+    marketConfiguration: MarketConfiguration,
+    connection: Connection,
+  ) {
+    super(marketConfiguration);
+    this.connection = connection;
   }
 
-  async listen(connection: Connection): Promise<void> {
+  async listen(): Promise<void> {
     if (this.market) {
-      connection.onAccountChange(
+      this.connection.onAccountChange(
         this.market!.bidsAddress,
         (accountInfo: AccountInfo<Buffer>, context: Context) => {
           this.bids = Orderbook.decode(this.market!, accountInfo!.data);
         },
         'processed' as Commitment,
       );
-      connection.onAccountChange(
+      this.connection.onAccountChange(
         this.market!.asksAddress,
         (accountInfo: AccountInfo<Buffer>, context: Context) => {
           this.asks = Orderbook.decode(this.market!, accountInfo!.data);
         },
         'processed' as Commitment,
       );
-      connection.onAccountChange(
+      this.connection.onAccountChange(
         (this.market as any)._decoded.eventQueue,
         (accountInfo: AccountInfo<Buffer>, context: Context) => {
+          this.eventsAccountInfo = accountInfo!.data;
           this.events = decodeEventQueue(accountInfo!.data, this.seqNum);
           for (const event of this.events) {
+            this.hasEvents = true;
             if (event.seqNum) {
               this.seqNum = event.seqNum;
             }
@@ -65,14 +72,14 @@ export class SerumMarket {
   ): Promise<void> {
     const publicKeys: PublicKey[] = [];
     for (const market of markets) {
-      assert(market.marketConfig.market);
-      publicKeys.push(new PublicKey(market.marketConfig.market));
-      assert(market.marketConfig.bids);
-      publicKeys.push(new PublicKey(market.marketConfig.bids));
-      assert(market.marketConfig.asks);
-      publicKeys.push(new PublicKey(market.marketConfig.asks));
-      assert(market.marketConfig.eventQueue);
-      publicKeys.push(new PublicKey(market.marketConfig.eventQueue));
+      assert(market.marketConfiguration.market);
+      publicKeys.push(new PublicKey(market.marketConfiguration.market));
+      assert(market.marketConfiguration.bids);
+      publicKeys.push(new PublicKey(market.marketConfiguration.bids));
+      assert(market.marketConfiguration.asks);
+      publicKeys.push(new PublicKey(market.marketConfiguration.asks));
+      assert(market.marketConfiguration.eventQueue);
+      publicKeys.push(new PublicKey(market.marketConfiguration.eventQueue));
     }
     const accounts = await connection.getMultipleAccountsInfo(publicKeys);
     let j = 0;
@@ -81,12 +88,12 @@ export class SerumMarket {
       j++;
       if (accounts[i]) {
         const decoded = MARKET_STATE_LAYOUT_V2.decode(accounts[i]!.data);
-        assert(market.marketConfig.baseDecimals);
-        assert(market.marketConfig.quoteDecimals);
+        assert(market.marketConfiguration.baseDecimals);
+        assert(market.marketConfiguration.quoteDecimals);
         market.market = new Market(
           decoded,
-          market.marketConfig.baseDecimals,
-          market.marketConfig.quoteDecimals,
+          market.marketConfiguration.baseDecimals,
+          market.marketConfiguration.quoteDecimals,
           {},
           programId,
         );

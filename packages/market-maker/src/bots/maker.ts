@@ -1,9 +1,7 @@
-import { PublicKey } from '@solana/web3.js';
-
 //TODO load this from a package.
-import { Order } from '../../../bot-sdk/src/';
+import { Order, SerumMarket } from '../../../bot-sdk/src/';
 
-import { Bot, Context, SerumMarket } from '../';
+import { Bot, Context } from '../context';
 
 const PARAMS = {
   maxPosition: 1_000,
@@ -30,7 +28,7 @@ export class Maker extends Bot {
     )) {
       if (this.tradingContext.marginAccount) {
         this.tradingContext.marginAccount.setLimits(
-          market.marketConfig.baseSymbol,
+          market.marketConfiguration.baseSymbol,
           PARAMS.minPosition,
           PARAMS.maxPosition,
         );
@@ -38,8 +36,8 @@ export class Maker extends Bot {
 
       this.instruments.push({
         market,
-        baseOracleSymbol: market.marketConfig.baseSymbol + '/USD',
-        quoteOracleSymbol: market.marketConfig.quoteSymbol + '/USD',
+        baseOracleSymbol: market.marketConfiguration.baseSymbol + '/USD',
+        quoteOracleSymbol: market.marketConfiguration.quoteSymbol + '/USD',
       });
     }
   }
@@ -59,7 +57,7 @@ export class Maker extends Bot {
         //TODO only update orders if the price has moved significantly using repriceBPS.
 
         orders.push({
-          symbol: instrument.market.marketConfig.symbol,
+          symbol: instrument.market.marketConfiguration.symbol,
           side: 'buy',
           price: bidPrice,
           size: PARAMS.orderSize,
@@ -67,7 +65,7 @@ export class Maker extends Bot {
           selfTradeBehavior: 'cancelProvide',
         });
         orders.push({
-          symbol: instrument.market.marketConfig.symbol,
+          symbol: instrument.market.marketConfiguration.symbol,
           side: 'sell',
           price: askPrice,
           size: PARAMS.orderSize,

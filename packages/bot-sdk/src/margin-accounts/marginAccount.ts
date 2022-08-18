@@ -21,14 +21,14 @@ import {
   Configuration,
   MarketConfiguration,
   TokenConfiguration,
-} from './configuration';
-import { Connection } from './connection';
-import { Market, Order } from './market';
-import { Position } from './position';
+} from '../configuration';
+import { Connection } from '../connection';
+import { Market, Order } from '../market';
+import { Position } from '../position';
 
 const ZERO_BN = new BN(0);
 
-export class MarginAccount {
+export abstract class MarginAccount {
   //address: PublicKey; //TODO
   configuration: Configuration;
   connection: Connection;
@@ -138,9 +138,7 @@ export class MarginAccount {
     assert(this.loaded);
 
     await this.cancelOrders();
-
     await this.settleFunds();
-
     await this.closeOpenOrders();
 
     const transaction = new Transaction();
@@ -175,17 +173,7 @@ export class MarginAccount {
     );
   }
 
-  static async createMarginAccount(
-    cluster: string,
-    keyfile: string,
-  ): Promise<void> {
-    //TODO create a margin account.
-
-    const marginAccount = new MarginAccount(cluster, keyfile);
-    await marginAccount.load();
-    await marginAccount.createTokenAccounts();
-    await marginAccount.createOpenOrders();
-  }
+  async crank(): Promise<void> {}
 
   async createOpenOrders(): Promise<void> {
     assert(this.loaded);

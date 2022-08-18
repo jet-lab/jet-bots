@@ -5,14 +5,13 @@ import yargs from 'yargs/yargs';
 //TODO load this from a package.
 import {
   Configuration,
-  MarginAccount,
   MarketConfiguration,
   OracleConfiguration,
   Order,
+  PythOracle,
+  SerumMarket,
+  SolanaMarginAccount,
 } from '../../bot-sdk/src/';
-
-import { PythOracle } from './pyth';
-import { SerumMarket } from './serum';
 
 export interface BotFactory {
   (type: string, tradingContext: Context, marketDataContext: Context): Bot;
@@ -22,7 +21,7 @@ export class Context {
   args: any;
   bot?: Bot;
   configuration: Configuration;
-  marginAccount?: MarginAccount;
+  marginAccount?: SolanaMarginAccount;
   symbols: string[] = [];
 
   connection: Connection;
@@ -52,7 +51,7 @@ export class Context {
       }).argv;
       this.symbols = this.args.s.split(',');
       assert(this.symbols);
-      this.marginAccount = new MarginAccount(
+      this.marginAccount = new SolanaMarginAccount(
         this.args.c,
         this.args.k,
         this.symbols,
@@ -68,11 +67,11 @@ export class Context {
     }
 
     for (const market of Object.values<SerumMarket>(this.markets)) {
-      await market.listen(this.connection);
+      await market.listen();
     }
 
     for (const oracle of Object.values<PythOracle>(this.oracles)) {
-      await oracle.listen(this.connection);
+      await oracle.listen();
     }
   }
 
@@ -86,7 +85,7 @@ export class Context {
     for (const marketConfig of Object.values<MarketConfiguration>(
       this.configuration.markets,
     )) {
-      const market = new SerumMarket(marketConfig);
+      const market = new SerumMarket(marketConfig, this.connection);
       this.markets[marketConfig.symbol] = market;
     }
     await SerumMarket.load(
@@ -98,7 +97,7 @@ export class Context {
     for (const oracleConfig of Object.values<OracleConfiguration>(
       this.configuration.oracles,
     )) {
-      const oracle = new PythOracle(oracleConfig);
+      const oracle = new PythOracle(oracleConfig, this.connection);
       this.oracles[oracleConfig.symbol] = oracle;
     }
     await PythOracle.load(

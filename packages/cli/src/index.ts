@@ -179,6 +179,7 @@ async function run() {
       const marginAccount = new MarginAccount(argv.c, argv.k);
       await marginAccount.load();
       marginAccount.sendTestOrder(argv.m, argv.t, argv.p, argv.s);
+      await marginAccount.crank(argv.m);
     },
     'settle-funds': async () => {
       const argv = await yargs(process.argv.slice(3)).options({

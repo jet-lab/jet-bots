@@ -1,10 +1,10 @@
 import { BN } from '@project-serum/anchor';
-import { PublicKey } from '@solana/web3.js';
+import assert from 'assert';
 
 //TODO load this from a package.
-import { Order } from '../../../bot-sdk/src/';
+import { Order, SerumMarket } from '../../../bot-sdk/src/';
 
-import { Bot, Context, SerumMarket } from '../';
+import { Bot, Context } from '../context';
 
 const PARAMS = {
   maxPosition: 1_000,
@@ -16,12 +16,17 @@ export class Taker extends Bot {
   constructor(tradingContext: Context, marketDataContext: Context) {
     super(tradingContext, marketDataContext);
 
+    assert(
+      tradingContext.configuration.cluster == 'devnet' ||
+        tradingContext.configuration.cluster == 'localnet',
+    );
+
     for (const market of Object.values<SerumMarket>(
       this.tradingContext.markets,
     )) {
       if (this.tradingContext.marginAccount) {
         this.tradingContext.marginAccount.setLimits(
-          market.marketConfig.baseSymbol,
+          market.marketConfiguration.baseSymbol,
           PARAMS.minPosition,
           PARAMS.maxPosition,
         );
@@ -42,7 +47,7 @@ export class Taker extends Bot {
             const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
               priceLevels[0];
             orders.push({
-              symbol: market.marketConfig.symbol,
+              symbol: market.marketConfiguration.symbol,
               side: 'sell',
               price,
               size,
@@ -58,7 +63,7 @@ export class Taker extends Bot {
             const [price, size, priceLots, sizeLots]: [number, number, BN, BN] =
               priceLevels[0];
             orders.push({
-              symbol: market.marketConfig.symbol,
+              symbol: market.marketConfiguration.symbol,
               side: 'buy',
               price,
               size,
