@@ -26,6 +26,8 @@ import { Connection } from './connection';
 import { Market, Order } from './market';
 import { Position } from './position';
 
+const ZERO_BN = new BN(0);
+
 export class MarginAccount {
   //address: PublicKey; //TODO
   configuration: Configuration;
@@ -100,17 +102,12 @@ export class MarginAccount {
   async cancelOrders(): Promise<void> {
     assert(this.loaded);
 
-    const ZERO_BN = new BN(0);
-
     const transaction = new Transaction();
     for (const market of Object.values<Market>(this.markets)) {
       if (market.openOrders) {
         for (let i = 0; i < market.openOrders.orders.length; i++) {
           const orderId = market.openOrders.orders[i];
           if (orderId.gt(ZERO_BN)) {
-            console.log(`isBidBits = ${market.openOrders.isBidBits.testn(i)}`);
-            console.log(`orderId = ${orderId}`);
-            console.log(`clientId = ${market.openOrders.clientIds[i]}`);
             transaction.add(
               DexInstructions.cancelOrderV2({
                 market: market.marketConfiguration.market,
@@ -531,8 +528,6 @@ export class MarginAccount {
         );
         console.log('');
 
-        const ZERO_BN = new BN(0);
-
         for (let i = 0; i < market.openOrders.orders.length; i++) {
           const orderId = market.openOrders.orders[i];
           if (orderId.gt(ZERO_BN) && !market.openOrders.freeSlotBits.testn(i)) {
@@ -556,6 +551,10 @@ export class MarginAccount {
         const transaction = new Transaction();
 
         for (const order of orders) {
+          if (order.price == 0 || order.size == 0) {
+            continue;
+          }
+
           const market = this.markets[order.symbol];
           if (market) {
             if (!market.openOrders) {
@@ -571,51 +570,79 @@ export class MarginAccount {
                   this.connection,
                 );
               }
+            } else {
+              for (let i = 0; i < market.openOrders.orders.length; i++) {
+                const orderId = market.openOrders.orders[i];
+                if (orderId.gt(ZERO_BN)) {
+                  const price = orderId.ushrn(64);
+
+                  console.log(`order.symbol = ${order.symbol}`);
+                  console.log(`orderId = ${orderId}`);
+                  console.log(`clientId = ${market.openOrders.clientIds[i]}`);
+                  console.log(`  price = ${price}`);
+                  console.log(
+                    `  isBid = ${market.openOrders.isBidBits.testn(i)}`,
+                  );
+                  console.log(`    order.price = ${order.price}`);
+                  console.log(`    order.side = ${order.side}`);
+                  console.log('');
+                }
+              }
             }
             assert(market.openOrders);
 
-            if (
-              market.market!.baseSizeNumberToLots(order.size).lte(new BN(0))
-            ) {
-              console.log(`size = ${order.size}`);
-              console.log(
-                `market.baseSizeNumberToLots(size) = ${market.market!.baseSizeNumberToLots(
-                  order.size,
-                )}`,
+            const priceLots = market.market!.priceNumberToLots(order.price);
+            const sizeLots = market.market!.baseSizeNumberToLots(order.size);
+
+            let baseQuantity = sizeLots;
+            let quoteQuantity = new BN(
+              market.marketConfiguration.quoteLotSize,
+            ).mul(sizeLots.mul(priceLots));
+
+            // Clip the order to what is in the wallet.
+            if (order.side == 'buy') {
+              quoteQuantity = BN.min(
+                quoteQuantity,
+                new BN(Number(market.quotePosition.balance)),
               );
-              console.log('size too small');
-            } else if (
-              market.market!.priceNumberToLots(order.price).lte(new BN(0))
-            ) {
-              console.log(`price = ${order.price}`);
-              console.log(
-                `market.priceNumberToLots(price) = ${market.market!.priceNumberToLots(
-                  order.price,
-                )}`,
-              );
-              console.log('invalid price');
             } else {
+              baseQuantity = BN.min(
+                baseQuantity,
+                new BN(Number(market.basePosition.balance)),
+              );
+            }
+
+            if (baseQuantity.gt(ZERO_BN) && quoteQuantity.gt(ZERO_BN)) {
+              assert(market.basePosition);
               assert(market.basePosition.tokenAccount);
+              assert(market.quotePosition);
               assert(market.quotePosition.tokenAccount);
-              const tokenAccount =
-                order.side == 'buy'
-                  ? market.quotePosition.tokenAccount
-                  : market.basePosition.tokenAccount;
               transaction.add(
-                market.market!.makeNewOrderV3Instruction({
-                  owner: this.owner!,
-                  payer: tokenAccount,
+                DexInstructions.newOrderV3({
+                  market: market.market!.address,
+                  bids: market.marketConfiguration.bids,
+                  asks: market.marketConfiguration.asks,
+                  requestQueue: market.marketConfiguration.requestQueue,
+                  eventQueue: market.marketConfiguration.eventQueue,
+                  baseVault: market.marketConfiguration.baseVault,
+                  quoteVault: market.marketConfiguration.quoteVault,
+                  openOrders: market.openOrders!.address,
+                  owner: this.owner!.publicKey,
+                  payer:
+                    order.side == 'buy'
+                      ? market.quotePosition.tokenAccount
+                      : market.basePosition.tokenAccount,
                   side: order.side,
-                  price: order.price,
-                  size: order.size,
+                  limitPrice: priceLots,
+                  maxBaseQuantity: baseQuantity,
+                  maxQuoteQuantity: quoteQuantity,
                   orderType: order.orderType,
                   clientId: order.clientId,
-                  openOrdersAddressKey: market.openOrders!.address,
-                  feeDiscountPubkey: null, //TODO
-                  selfTradeBehavior: order.selfTradeBehavior,
                   programId: market.market!.programId,
-                  //maxTs,
-                  //replaceIfExists,
+                  selfTradeBehavior: order.selfTradeBehavior,
+                  //feeDiscountPubkey: feeDiscountPubkey, //TODO
+                  //maxTs, //TODO
+                  //replaceIfExists, //TODO
                 }),
               );
             }

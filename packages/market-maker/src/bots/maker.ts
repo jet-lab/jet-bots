@@ -9,7 +9,7 @@ const PARAMS = {
   maxPosition: 1_000,
   minPosition: -1_000,
   orderSize: 100,
-  repriceBPS: 5,
+  repriceBPS: 5, //TODO
   spreadBPS: 20,
 };
 
@@ -45,8 +45,8 @@ export class Maker extends Bot {
   }
 
   process(): void {
-    const orders: Order[] = [];
     for (const instrument of this.instruments) {
+      const orders: Order[] = [];
       const basePrice =
         this.marketDataContext.oracles[instrument.baseOracleSymbol].price;
       const quotePrice =
@@ -74,8 +74,8 @@ export class Maker extends Bot {
           orderType: 'limit',
           selfTradeBehavior: 'cancelProvide',
         });
+        this.sendOrders(orders);
       }
-      this.sendOrders(orders);
     }
   }
 }

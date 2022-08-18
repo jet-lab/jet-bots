@@ -17,6 +17,7 @@ class Controller {
 
       this.isRunning = false;
 
+      /*
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
@@ -27,6 +28,7 @@ class Controller {
       } catch (err) {
         console.log(JSON.stringify(err));
       }
+      */
 
       console.log(`MARKET MAKER EXITED`);
 
@@ -54,10 +56,13 @@ async function run() {
   });
 
   await mainnetContext.load();
+
   await context.load({
     botFactory: createBot,
     marketDataContext: mainnetContext,
   });
+  await context.marginAccount!.createTokenAccounts();
+  await context.marginAccount!.createOpenOrders();
 
   await mainnetContext.listen();
   await context.listen();

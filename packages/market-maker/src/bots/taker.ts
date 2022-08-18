@@ -30,10 +30,10 @@ export class Taker extends Bot {
   }
 
   process(): void {
-    const orders: Order[] = [];
     for (const market of Object.values<SerumMarket>(
       this.tradingContext.markets,
     )) {
+      const orders: Order[] = [];
       const p = Math.random();
       if (p < PARAMS.takeProbability) {
         if (market.bids) {
@@ -68,7 +68,7 @@ export class Taker extends Bot {
           }
         }
       }
+      this.sendOrders(orders);
     }
-    this.sendOrders(orders);
   }
 }
