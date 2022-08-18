@@ -24,6 +24,7 @@ import {
 } from '../configuration';
 import { Connection } from '../connection';
 import { Market, Order } from '../market';
+import { getSerumError } from '../markets/serum';
 import { Position } from '../position';
 
 const ZERO_BN = new BN(0);
@@ -46,12 +47,18 @@ export abstract class MarginAccount {
   // Populated after listen.
   listening: boolean = false;
 
-  constructor(cluster: string, keyfile?: string, symbols?: string[]) {
-    this.configuration = new Configuration(cluster, symbols);
+  constructor(
+    cluster: string,
+    verbose: boolean,
+    keyfile?: string,
+    symbols?: string[],
+  ) {
+    this.configuration = new Configuration(cluster, verbose, symbols);
 
     this.connection = new Connection(
       this.configuration.url,
       'processed' as Commitment,
+      verbose,
     );
 
     if (keyfile) {
@@ -590,16 +597,6 @@ export abstract class MarginAccount {
                 const price = orderId.ushrn(64);
                 if (price.eq(priceLots)) {
                   orderExists = true;
-                  /*
-                  console.log(`order.symbol = ${order.symbol}`);
-                  console.log(`orderId = ${orderId}`);
-                  console.log(`clientId = ${market.openOrders.clientIds[i]}`);
-                  console.log(`  price = ${price}`);
-                  console.log(`  isBid = ${market.openOrders.isBidBits.testn(i)}`);
-                  console.log(`    order.price = ${order.price}`);
-                  console.log(`    order.side = ${order.side}`);
-                  console.log('');
-                  */
                   break;
                 }
               }
@@ -614,6 +611,18 @@ export abstract class MarginAccount {
               assert(market.basePosition.tokenAccount);
               assert(market.quotePosition);
               assert(market.quotePosition.tokenAccount);
+
+              if (this.configuration.verbose) {
+                console.log(`  SEND ORDER`);
+                console.log(`    order.clientId  = ${order.clientId}`);
+                console.log(`    order.orderType = ${order.orderType}`);
+                console.log(`    order.price     = ${order.price}`);
+                console.log(`    order.side      = ${order.side}`);
+                console.log(`    order.size      = ${order.size}`);
+                console.log(`    order.symbol    = ${order.symbol}`);
+                console.log('');
+              }
+
               transaction.add(
                 DexInstructions.newOrderV3({
                   market: market.market!.address,
@@ -649,10 +658,15 @@ export abstract class MarginAccount {
         }
 
         if (transaction.instructions.length > 0) {
-          this.connection.sendAndConfirmTransaction(transaction, [
-            this.owner!,
-            this.payer!,
-          ]);
+          const result = await this.connection.sendAndConfirmTransaction(
+            transaction,
+            [this.owner!, this.payer!],
+          );
+          if (result.err) {
+            const errorCode: number =
+              result.err.valueOf()['InstructionError'][1]['Custom'];
+            console.log(`SERUM ERROR: ${getSerumError(errorCode)}`);
+          }
         }
       } catch (err) {
         console.log(`ERROR: ${JSON.stringify(err)}`);

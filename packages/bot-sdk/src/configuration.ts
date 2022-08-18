@@ -79,12 +79,13 @@ export class Configuration {
   serumReferralAuthority: PublicKey;
   splTokenFaucet?: PublicKey;
   url: string;
+  verbose: boolean;
 
   markets: Record<string, MarketConfiguration> = {};
   oracles: Record<string, OracleConfiguration> = {};
   tokens: Record<string, TokenConfiguration> = {};
 
-  constructor(cluster: string, symbols?: string[]) {
+  constructor(cluster: string, verbose: boolean, symbols?: string[]) {
     const config =
       !symbols || symbols.length == 0
         ? loadConfig(cluster)
@@ -98,6 +99,7 @@ export class Configuration {
     if (config.splTokenFaucet)
       this.splTokenFaucet = new PublicKey(config.splTokenFaucet);
     this.url = config.url;
+    this.verbose = verbose;
 
     for (const marketConfig of Object.values<any>(config.markets)) {
       this.markets[marketConfig.symbol] = new MarketConfiguration(marketConfig);

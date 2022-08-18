@@ -31,13 +31,18 @@ export class Context {
   constructor(
     params: {
       cluster?: Cluster;
+      verbose: boolean;
       symbols?: string[];
-    } = {},
+    } = { verbose: true },
   ) {
     if (params.cluster) {
       assert(params.symbols);
       this.symbols = params.symbols;
-      this.configuration = new Configuration(params.cluster, params.symbols);
+      this.configuration = new Configuration(
+        params.cluster,
+        params.verbose,
+        params.symbols,
+      );
       this.connection = new Connection(
         this.configuration.url,
         'processed' as Commitment,
@@ -53,6 +58,7 @@ export class Context {
       assert(this.symbols);
       this.marginAccount = new SolanaMarginAccount(
         this.args.c,
+        params.verbose,
         this.args.k,
         this.symbols,
       );

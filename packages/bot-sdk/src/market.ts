@@ -73,9 +73,11 @@ export class Market {
         if (!orderId.eq(new BN(0))) hasOrders = true;
       });
       if (hasOrders) {
-        console.log(
-          `OpenOrders account still has open orders: ${openOrdersAccount.publicKey}`,
-        );
+        if (configuration.verbose) {
+          console.log(
+            `OpenOrders account still has open orders: ${openOrdersAccount.publicKey}`,
+          );
+        }
         continue;
       }
 
@@ -89,9 +91,11 @@ export class Market {
           return marketConfig.market.toBase58() == openOrders.market.toBase58();
         });
         if (marketConfig) {
-          console.log(
-            `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
-          );
+          if (configuration.verbose) {
+            console.log(
+              `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
+            );
+          }
         }
         continue;
       } else {
@@ -181,9 +185,11 @@ export class Market {
     configuration: Configuration,
     connection: Connection,
   ): Promise<void> {
-    console.log(
-      `Listening to OpenOrders for ${this.marketConfiguration.symbol}`,
-    );
+    if (configuration.verbose) {
+      console.log(
+        `Listening to OpenOrders for ${this.marketConfiguration.symbol}`,
+      );
+    }
     assert(this.openOrders);
     connection.onAccountChange(
       this.openOrders.address,

@@ -40,8 +40,14 @@ async function run() {
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
         s: { alias: 'symbol', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.airdrop(argv.s, argv.a);
     },
@@ -49,24 +55,42 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         m: { alias: 'market', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c);
+      const marginAccount = new MarginAccount(argv.c, argv.v);
       await marginAccount.printAsks(argv.m);
     },
     'ask-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         m: { alias: 'market', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c);
+      const marginAccount = new MarginAccount(argv.c, argv.v);
       await marginAccount.printAskOrders(argv.m);
     },
     balance: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       marginAccount.printBalance();
     },
@@ -74,24 +98,42 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         m: { alias: 'market', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c);
+      const marginAccount = new MarginAccount(argv.c, argv.v);
       await marginAccount.printBids(argv.m);
     },
     'bid-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         m: { alias: 'market', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c);
+      const marginAccount = new MarginAccount(argv.c, argv.v);
       await marginAccount.printBidOrders(argv.m);
     },
     'cancel-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.cancelOrders();
     },
@@ -99,8 +141,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.closeMarginAccount();
     },
@@ -108,8 +156,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.closeOpenOrders();
     },
     create: async () => {
@@ -123,8 +177,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.createOpenOrders();
     },
@@ -132,8 +192,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.createTokenAccounts();
     },
@@ -143,8 +209,14 @@ async function run() {
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
         t: { alias: 'token', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.deposit(argv.t, argv.a);
     },
@@ -152,8 +224,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.listenOpenOrders();
       await waitForExit();
@@ -162,8 +240,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       marginAccount.printOpenOrders();
     },
@@ -175,8 +259,14 @@ async function run() {
         p: { alias: 'price', required: true, type: 'number' },
         s: { alias: 'size', required: true, type: 'number' },
         t: { alias: 'token', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       marginAccount.sendTestOrder(argv.m, argv.t, argv.p, argv.s);
       //TODO await marginAccount.crank(argv.m);
@@ -185,8 +275,14 @@ async function run() {
       const argv = await yargs(process.argv.slice(3)).options({
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.settleFunds();
     },
@@ -196,8 +292,14 @@ async function run() {
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
         s: { alias: 'symbol', required: true, type: 'string' },
+        v: {
+          alias: 'verbose',
+          required: false,
+          type: 'boolean',
+          default: true,
+        },
       }).argv;
-      const marginAccount = new MarginAccount(argv.c, argv.k);
+      const marginAccount = new MarginAccount(argv.c, argv.v, argv.k);
       await marginAccount.load();
       await marginAccount.withdraw(argv.s, argv.a);
     },

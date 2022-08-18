@@ -93,14 +93,15 @@ export class Position {
         undefined,
         'processed',
       );
-      console.log(txid);
     }
   }
 
   async listen(connection: Connection): Promise<void> {
-    console.log(
-      `Listening to token account for ${this.tokenConfiguration.symbol} ${this.tokenAccount}`,
-    );
+    if (this.configuration.verbose) {
+      console.log(
+        `Listening to token account for ${this.tokenConfiguration.symbol} ${this.tokenAccount}`,
+      );
+    }
     assert(this.tokenAccount);
     connection.onAccountChange(
       this.tokenAccount,

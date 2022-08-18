@@ -199,3 +199,216 @@ function divideBnToNumber(numerator: BN, denominator: BN): number {
   const gcd = rem.gcd(denominator);
   return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber();
 }
+
+export function getSerumError(errorCode: number): string {
+  switch (errorCode) {
+    case 0: {
+      return 'InvalidMarketFlags';
+    }
+    case 1: {
+      return 'InvalidAskFlags';
+    }
+    case 2: {
+      return 'InvalidBidFlags';
+    }
+    case 3: {
+      return 'InvalidQueueLength';
+    }
+    case 4: {
+      return 'OwnerAccountNotProvided';
+    }
+
+    case 5: {
+      return 'ConsumeEventsQueueFailure';
+    }
+    case 6: {
+      return 'WrongCoinVault';
+    }
+    case 7: {
+      return 'WrongPcVault';
+    }
+    case 8: {
+      return 'WrongCoinMint';
+    }
+    case 9: {
+      return 'WrongPcMint';
+    }
+
+    case 10: {
+      return 'CoinVaultProgramId';
+    }
+    case 11: {
+      return 'PcVaultProgramId';
+    }
+    case 12: {
+      return 'CoinMintProgramId';
+    }
+    case 13: {
+      return 'PcMintProgramId';
+    }
+    case 14: {
+      return 'WrongCoinMintSize';
+    }
+
+    case 15: {
+      return 'WrongPcMintSize';
+    }
+    case 16: {
+      return 'WrongCoinVaultSize';
+    }
+    case 17: {
+      return 'WrongPcVaultSize';
+    }
+    case 18: {
+      return 'UninitializedVault';
+    }
+    case 19: {
+      return 'UninitializedMint';
+    }
+
+    case 20: {
+      return 'CoinMintUninitialized';
+    }
+    case 21: {
+      return 'PcMintUninitialized';
+    }
+    case 22: {
+      return 'WrongMint';
+    }
+    case 23: {
+      return 'WrongVaultOwner';
+    }
+    case 24: {
+      return 'VaultHasDelegate';
+    }
+
+    case 25: {
+      return 'AlreadyInitialized';
+    }
+    case 26: {
+      return 'WrongAccountDataAlignment';
+    }
+    case 27: {
+      return 'WrongAccountDataPaddingLength';
+    }
+    case 28: {
+      return 'WrongAccountHeadPadding';
+    }
+    case 29: {
+      return 'WrongAccountTailPadding';
+    }
+
+    case 30: {
+      return 'RequestQueueEmpty';
+    }
+    case 31: {
+      return 'EventQueueTooSmall';
+    }
+    case 32: {
+      return 'SlabTooSmall';
+    }
+    case 33: {
+      return 'BadVaultSignerNonce';
+    }
+    case 34: {
+      return 'InsufficientFunds';
+    }
+
+    case 35: {
+      return 'SplAccountProgramId';
+    }
+    case 36: {
+      return 'SplAccountLen';
+    }
+    case 37: {
+      return 'WrongFeeDiscountAccountOwner';
+    }
+    case 38: {
+      return 'WrongFeeDiscountMint';
+    }
+    case 39: {
+      return 'CoinPayerProgramId';
+    }
+
+    case 40: {
+      return 'PcPayerProgramId';
+    }
+    case 41: {
+      return 'ClientIdNotFound';
+    }
+    case 42: {
+      return 'TooManyOpenOrders';
+    }
+    case 43: {
+      return 'FakeErrorSoWeDontChangeNumbers';
+    }
+    case 44: {
+      return 'BorrowError';
+    }
+
+    case 45: {
+      return 'WrongOrdersAccount';
+    }
+    case 46: {
+      return 'WrongBidsAccount';
+    }
+    case 47: {
+      return 'WrongAsksAccount';
+    }
+    case 48: {
+      return 'WrongRequestQueueAccount';
+    }
+    case 49: {
+      return 'WrongEventQueueAccount';
+    }
+
+    case 50: {
+      return 'RequestQueueFull';
+    }
+    case 51: {
+      return 'EventQueueFull';
+    }
+    case 52: {
+      return 'MarketIsDisabled';
+    }
+    case 53: {
+      return 'WrongSigner';
+    }
+    case 54: {
+      return 'TransferFailed';
+    }
+
+    case 55: {
+      return 'ClientOrderIdIsZero';
+    }
+    case 56: {
+      return 'WrongRentSysvarAccount';
+    }
+    case 57: {
+      return 'RentNotProvided';
+    }
+    case 58: {
+      return 'OrdersNotRentExempt';
+    }
+    case 59: {
+      return 'OrderNotFound';
+    }
+
+    case 60: {
+      return 'OrderNotYours';
+    }
+    case 61: {
+      return 'WouldSelfTrade';
+    }
+    case 62: {
+      return 'InvalidOpenOrdersAuthority';
+    }
+    case 63: {
+      return 'OrderMaxTimestampExceeded';
+    }
+
+    default: {
+      return 'Unknown';
+    }
+  }
+}

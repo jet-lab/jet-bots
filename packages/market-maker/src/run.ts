@@ -47,10 +47,13 @@ class Controller {
 }
 
 async function run() {
-  const marginAccountContext = new Context();
+  const verbose = true;
+
+  const marginAccountContext = new Context({ verbose });
 
   const marketDataContext = new Context({
     cluster: 'mainnet-beta',
+    verbose,
     symbols: marginAccountContext.symbols,
   });
 
