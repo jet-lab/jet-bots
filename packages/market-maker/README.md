@@ -1,4 +1,4 @@
-# Jet Trading Bot
+# Jet Market Maker Bot
 
 
 
