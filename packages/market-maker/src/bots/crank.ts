@@ -69,9 +69,9 @@ export class Crank extends Bot {
     if (transaction.instructions.length > 0) {
       transaction.feePayer =
         this.tradingContext.marginAccount!.payer!.publicKey;
-
-      //TODO
-      //await this.connection.sendTransaction(transaction, [payer]);
+      this.tradingContext.connection.sendTransaction(transaction, [
+        this.tradingContext.marginAccount!.payer!,
+      ]);
     }
   }
 }
