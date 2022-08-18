@@ -558,24 +558,6 @@ export abstract class MarginAccount {
                   this.connection,
                 );
               }
-            } else {
-              for (let i = 0; i < market.openOrders.orders.length; i++) {
-                const orderId = market.openOrders.orders[i];
-                if (orderId.gt(ZERO_BN)) {
-                  const price = orderId.ushrn(64);
-
-                  console.log(`order.symbol = ${order.symbol}`);
-                  console.log(`orderId = ${orderId}`);
-                  console.log(`clientId = ${market.openOrders.clientIds[i]}`);
-                  console.log(`  price = ${price}`);
-                  console.log(
-                    `  isBid = ${market.openOrders.isBidBits.testn(i)}`,
-                  );
-                  console.log(`    order.price = ${order.price}`);
-                  console.log(`    order.side = ${order.side}`);
-                  console.log('');
-                }
-              }
             }
             assert(market.openOrders);
 
@@ -600,7 +582,34 @@ export abstract class MarginAccount {
               );
             }
 
-            if (baseQuantity.gt(ZERO_BN) && quoteQuantity.gt(ZERO_BN)) {
+            let orderExists = false;
+
+            for (let i = 0; i < market.openOrders.orders.length; i++) {
+              const orderId = market.openOrders.orders[i];
+              if (orderId.gt(ZERO_BN)) {
+                const price = orderId.ushrn(64);
+                if (price.eq(priceLots)) {
+                  orderExists = true;
+                  /*
+                  console.log(`order.symbol = ${order.symbol}`);
+                  console.log(`orderId = ${orderId}`);
+                  console.log(`clientId = ${market.openOrders.clientIds[i]}`);
+                  console.log(`  price = ${price}`);
+                  console.log(`  isBid = ${market.openOrders.isBidBits.testn(i)}`);
+                  console.log(`    order.price = ${order.price}`);
+                  console.log(`    order.side = ${order.side}`);
+                  console.log('');
+                  */
+                  break;
+                }
+              }
+            }
+
+            if (
+              !orderExists &&
+              baseQuantity.gt(ZERO_BN) &&
+              quoteQuantity.gt(ZERO_BN)
+            ) {
               assert(market.basePosition);
               assert(market.basePosition.tokenAccount);
               assert(market.quotePosition);
