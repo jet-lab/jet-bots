@@ -595,13 +595,70 @@ export abstract class MarginAccount {
 
     (async () => {
       try {
+        //TODO First clip orders and filter the orders array to exclude orders with zero size.
+        orders = orders.filter(order => {
+          return order.price > 0 && order.size > 0;
+        });
+
         const transaction = new Transaction();
 
-        for (const order of orders) {
-          if (order.price == 0 || order.size == 0) {
-            continue;
-          }
+        // Cancel existing orders first.
+        for (const market of Object.values<Market>(this.markets)) {
+          if (market instanceof SerumMarket) {
+            if (market.openOrders) {
+              for (let i = 0; i < market.openOrders.orders.length; i++) {
+                const orderId = market.openOrders.orders[i];
+                if (orderId.gt(ZERO_BN)) {
+                  const openOrdersSlot = i;
+                  const side = market.openOrders.isBidBits.testn(i)
+                    ? 'buy'
+                    : 'sell';
+                  for (const order of orders) {
+                    if (
+                      order.symbol == market.marketConfiguration.symbol &&
+                      order.side == side
+                    ) {
+                      if (this.configuration.verbose) {
+                        console.log(`  CANCEL ORDER`);
+                        console.log(
+                          `    market         = ${market.marketConfiguration.symbol}`,
+                        );
+                        console.log(
+                          `    openOrders     = ${market.openOrders.address}`,
+                        );
+                        console.log(`    side           = ${side}`);
+                        console.log(`    orderId        = ${orderId}`);
+                        console.log(`    openOrdersSlot = ${openOrdersSlot}`);
+                        console.log('');
+                      }
 
+                      const price = orderId.ushrn(64);
+
+                      //TODO if the price is the same don't cancel, but don't send either.
+
+                      transaction.add(
+                        DexInstructions.cancelOrderV2({
+                          market: market.marketConfiguration.market,
+                          owner: this.owner!.publicKey,
+                          openOrders: market.openOrders.address,
+                          bids: market.marketConfiguration.bids,
+                          asks: market.marketConfiguration.asks,
+                          eventQueue: market.marketConfiguration.eventQueue,
+                          side,
+                          orderId,
+                          openOrdersSlot,
+                          programId: this.configuration.serumProgramId,
+                        }),
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        for (const order of orders) {
           const market = this.markets[order.symbol];
           if (market && market instanceof SerumMarket) {
             if (!market.openOrders) {
@@ -638,54 +695,13 @@ export abstract class MarginAccount {
               );
             }
 
-            let sendOrder = true;
-
-            let cancelOrder = false;
-            let openOrdersSlot = 0;
-            let orderId = ZERO_BN;
-            let side = 'buy';
-
-            for (let i = 0; i < market.openOrders.orders.length; i++) {
-              openOrdersSlot = i;
-              orderId = market.openOrders.orders[i];
-              if (orderId.gt(ZERO_BN)) {
-                side = market.openOrders.isBidBits.testn(i) ? 'buy' : 'sell';
-                const price = orderId.ushrn(64);
-
-                if (price.eq(priceLots)) {
-                  sendOrder = false;
-                  break;
-                } else if (side == order.side) {
-                  cancelOrder = true;
-                  break;
-                }
-              }
-            }
-
-            if (
-              sendOrder &&
-              baseQuantity.gt(ZERO_BN) &&
-              quoteQuantity.gt(ZERO_BN)
-            ) {
+            if (baseQuantity.gt(ZERO_BN) && quoteQuantity.gt(ZERO_BN)) {
               assert(market.basePosition);
               assert(market.basePosition.tokenAccount);
               assert(market.quotePosition);
               assert(market.quotePosition.tokenAccount);
 
               if (this.configuration.verbose) {
-                if (cancelOrder) {
-                  console.log(`  CANCEL ORDER`);
-                  console.log(
-                    `    market         = ${market.marketConfiguration.symbol}`,
-                  );
-                  console.log(
-                    `    openOrders     = ${market.openOrders.address}`,
-                  );
-                  console.log(`    side           = ${side}`);
-                  console.log(`    orderId        = ${orderId}`);
-                  console.log(`    openOrdersSlot = ${openOrdersSlot}`);
-                  console.log('');
-                }
                 console.log(`  SEND ORDER`);
                 console.log(`    order.clientId  = ${order.clientId}`);
                 console.log(`    order.orderType = ${order.orderType}`);
@@ -696,22 +712,6 @@ export abstract class MarginAccount {
                 console.log('');
               }
 
-              if (cancelOrder) {
-                transaction.add(
-                  DexInstructions.cancelOrderV2({
-                    market: market.marketConfiguration.market,
-                    owner: this.owner!.publicKey,
-                    openOrders: market.openOrders.address,
-                    bids: market.marketConfiguration.bids,
-                    asks: market.marketConfiguration.asks,
-                    eventQueue: market.marketConfiguration.eventQueue,
-                    side,
-                    orderId,
-                    openOrdersSlot,
-                    programId: this.configuration.serumProgramId,
-                  }),
-                );
-              }
               transaction.add(
                 DexInstructions.newOrderV3({
                   market: market.market!.address,
@@ -784,7 +784,7 @@ export abstract class MarginAccount {
     ) {
       this.sendOrders([
         {
-          market: 'serum',
+          dex: 'serum',
           symbol: marketName,
           clientId: new BN(Date.now()),
           orderType: 'limit',
@@ -800,7 +800,7 @@ export abstract class MarginAccount {
     ) {
       this.sendOrders([
         {
-          market: 'serum',
+          dex: 'serum',
           symbol: marketName,
           clientId: new BN(Date.now()),
           orderType: 'limit',

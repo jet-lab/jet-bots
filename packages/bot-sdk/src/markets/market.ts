@@ -6,7 +6,7 @@ import { Connection } from '../connection';
 import { Position } from '../margin-accounts/position';
 
 export interface Order {
-  market: 'serum';
+  dex: 'serum';
   symbol: string;
   clientId?: BN;
   orderType?: 'limit' | 'ioc' | 'postOnly';

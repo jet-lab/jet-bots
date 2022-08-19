@@ -53,7 +53,7 @@ export class Taker extends Bot {
                 BN,
               ] = priceLevels[0];
               orders.push({
-                market: 'serum',
+                dex: 'serum',
                 symbol: market.marketConfiguration.symbol,
                 side: 'sell',
                 price,
@@ -74,7 +74,7 @@ export class Taker extends Bot {
                 BN,
               ] = priceLevels[0];
               orders.push({
-                market: 'serum',
+                dex: 'serum',
                 symbol: market.marketConfiguration.symbol,
                 side: 'buy',
                 price,

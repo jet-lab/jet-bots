@@ -63,7 +63,7 @@ export class Maker extends Bot {
         //TODO only update orders if the price has moved significantly using repriceBPS.
 
         orders.push({
-          market: 'serum',
+          dex: 'serum',
           symbol: instrument.market.marketConfiguration.symbol,
           side: 'buy',
           price: bidPrice,
@@ -72,7 +72,7 @@ export class Maker extends Bot {
           selfTradeBehavior: 'cancelProvide',
         });
         orders.push({
-          market: 'serum',
+          dex: 'serum',
           symbol: instrument.market.marketConfiguration.symbol,
           side: 'sell',
           price: askPrice,

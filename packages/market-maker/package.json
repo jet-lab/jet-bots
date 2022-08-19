@@ -7,7 +7,7 @@
   "scripts": {
     "clean": "rm -rf lib/",
     "build": "yarn clean && tsc",
-    "maker": "ts-node src/run.ts -b maker -c d -k ~/.config/solana/maker.json -s BTC/USDC,ETH/USDC,SOL/USDC -v",
+    "maker": "ts-node src/run.ts -b maker -c d -k ~/.config/solana/maker.json -s SOL/USDC -v",
     "taker": "ts-node src/run.ts -b taker -c d -k ~/.config/solana/taker.json -s BTC/USDC,ETH/USDC,SOL/USDC -v"
   },
   "devDependencies": {
