@@ -4,12 +4,7 @@ import chalk from 'chalk';
 import figlet from 'figlet';
 import yargs from 'yargs/yargs';
 
-import {
-  MarginAccount,
-  Market,
-  SerumMarket,
-  SolanaMarginAccount,
-} from '../../bot-sdk/src/';
+import { Market, SerumMarket, SolanaMarginAccount } from '../../bot-sdk/src/';
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
