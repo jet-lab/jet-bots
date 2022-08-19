@@ -2,12 +2,7 @@ import { BN } from '@project-serum/anchor';
 import assert from 'assert';
 
 //TODO load this from a package.
-import {
-  MarginAccount,
-  Market,
-  Order,
-  SerumMarket,
-} from '../../../bot-sdk/src/';
+import { Market, Order, Protocol, SerumMarket } from '../../../bot-sdk/src/';
 
 import { Bot } from './bot';
 
@@ -20,16 +15,16 @@ const PARAMS = {
 };
 
 export class Taker extends Bot {
-  constructor(marginAccount: MarginAccount) {
-    super(marginAccount);
+  constructor(protocol: Protocol) {
+    super(protocol);
 
     assert(
-      marginAccount.configuration.cluster == 'devnet' ||
-        marginAccount.configuration.cluster == 'localnet',
+      protocol.configuration.cluster == 'devnet' ||
+        protocol.configuration.cluster == 'localnet',
     );
 
-    for (const market of Object.values<Market>(this.marginAccount.markets)) {
-      this.marginAccount.setLimits({
+    for (const market of Object.values<Market>(this.protocol.markets)) {
+      this.protocol.setLimits({
         symbol: market.marketConfiguration.baseSymbol,
         maxOrderAmount: PARAMS.maxOrderAmount,
         maxPositionAmount: PARAMS.maxPositionAmount,
@@ -40,7 +35,7 @@ export class Taker extends Bot {
   }
 
   async process(): Promise<void> {
-    for (const market of Object.values<Market>(this.marginAccount.markets)) {
+    for (const market of Object.values<Market>(this.protocol.markets)) {
       const orders: Order[] = [];
       if (market instanceof SerumMarket) {
         const p = Math.random();

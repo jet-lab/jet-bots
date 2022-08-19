@@ -1,16 +1,18 @@
 #!/usr/bin/env ts-node
 
+import { Keypair } from '@solana/web3.js';
 import assert from 'assert';
+import * as fs from 'fs';
 import yargs from 'yargs/yargs';
 
 //TODO load this from a package.
 import {
   Configuration,
   Connection,
-  MarginAccount,
   OracleConfiguration,
+  Protocol,
   PythOracle,
-  SolanaMarginAccount,
+  SolanaProtocol,
 } from '../../bot-sdk/src/';
 
 import { Bot } from './bots/bot';
@@ -20,18 +22,18 @@ import { Taker } from './bots/taker';
 
 function createBot(
   type: string,
-  marginAccount: MarginAccount,
+  protocol: Protocol,
   oracles?: Record<string, PythOracle>,
 ): Bot {
   switch (type) {
     case 'maker':
-      return new Maker(marginAccount, oracles!);
+      return new Maker(protocol, oracles!);
     case 'taker':
       assert(
-        marginAccount.configuration.cluster == 'devnet' ||
-          marginAccount.configuration.cluster == 'localnet',
+        protocol.configuration.cluster == 'devnet' ||
+          protocol.configuration.cluster == 'localnet',
       );
-      return new Taker(marginAccount);
+      return new Taker(protocol);
     default: {
       console.log(`Unhandled bot type: ${type}`);
       process.exit();
@@ -47,7 +49,7 @@ class Controller {
   isRunning = true;
   interval = 4000;
 
-  constructor(marginAccount: MarginAccount, crank?: Crank) {
+  constructor(protocol: Protocol, crank?: Crank) {
     process.on('SIGINT', async () => {
       console.log('Caught keyboard interrupt.');
 
@@ -57,7 +59,7 @@ class Controller {
       await sleep(this.interval);
 
       try {
-        await marginAccount.cancelOrders();
+        await protocol.cancelOrders();
       } catch (err) {
         console.log(JSON.stringify(err));
       }
@@ -65,7 +67,7 @@ class Controller {
       if (crank) {
         try {
           await crank.process();
-          await marginAccount.settleFunds();
+          await protocol.settleFunds();
         } catch (err) {
           console.log(JSON.stringify(err));
         }
@@ -104,7 +106,18 @@ async function run() {
 
   //TODO if the user is on devnet or localnet and they don't have account ask them if they want to create one, if not exit.
 
-  const marginAccount = new SolanaMarginAccount(
+  /*
+  if (!fs.existsSync(args.k)) {
+    console.log(`Solana account '${args.k}' does not exist. Creating a new account.`);
+
+    const keypair = Keypair.generate();
+    fs.writeFileSync(args.k, '[' + keypair.secretKey.toString() + ']');
+
+    //TODO airdrop some tokens to test with.
+  }
+  */
+
+  const protocol = new SolanaProtocol(
     args.c,
     args.v,
     args.k,
@@ -113,12 +126,12 @@ async function run() {
 
   const mainnetConfiguration = new Configuration(
     'mainnet-beta',
-    marginAccount.configuration.verbose,
-    marginAccount.symbols,
+    protocol.configuration.verbose,
+    protocol.symbols,
   );
   const mainnetConnection = new Connection(
     mainnetConfiguration.url,
-    marginAccount.configuration.verbose,
+    protocol.configuration.verbose,
   );
   const oracles: Record<string, PythOracle> = {};
   for (const oracleConfig of Object.values<OracleConfiguration>(
@@ -131,28 +144,28 @@ async function run() {
   }
   await PythOracle.load(mainnetConnection, Object.values<PythOracle>(oracles));
 
-  await marginAccount.load();
+  await protocol.load();
 
   //TODO if the user is on devnet or localnet and they don't have tokens ask them if they want to get airdrops.
 
-  const bot: Bot = createBot(args.b, marginAccount, oracles);
+  const bot: Bot = createBot(args.b, protocol, oracles);
 
-  await marginAccount.createTokenAccounts();
-  await marginAccount.createOpenOrders();
+  await protocol.createTokenAccounts();
+  await protocol.createOpenOrders();
 
   const crank =
-    marginAccount.configuration.cluster == 'devnet' ||
-    marginAccount.configuration.cluster == 'localnet'
-      ? new Crank(marginAccount)
+    protocol.configuration.cluster == 'devnet' ||
+    protocol.configuration.cluster == 'localnet'
+      ? new Crank(protocol)
       : undefined;
 
   for (const oracle of Object.values<PythOracle>(oracles)) {
     await oracle.listen();
   }
 
-  await marginAccount.listen();
+  await protocol.listen();
 
-  const controller = new Controller(marginAccount, crank);
+  const controller = new Controller(protocol, crank);
 
   console.log(`MARKET MAKER RUNNING - Press Ctrl+C to exit.`);
   console.log(``);
@@ -167,7 +180,7 @@ async function run() {
     if (crank) {
       try {
         await crank.process();
-        await marginAccount.settleFunds();
+        await protocol.settleFunds();
       } catch (e) {
         console.log(e);
       }

@@ -1,11 +1,7 @@
 import { BN } from '@project-serum/anchor';
 import { DexInstructions, OpenOrders } from '@project-serum/serum';
 import { ORDERBOOK_LAYOUT } from '@project-serum/serum/lib/market';
-import {
-  AccountLayout,
-  createCloseAccountInstruction,
-  TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {
   Account,
   AccountInfo,
@@ -30,7 +26,7 @@ import { Position } from './position';
 
 const ZERO_BN = new BN(0);
 
-export abstract class MarginAccount {
+export abstract class Protocol {
   //address: PublicKey; //TODO
   configuration: Configuration;
   connection: Connection;
@@ -162,35 +158,7 @@ export abstract class MarginAccount {
     }
   }
 
-  async closeMarginAccount(): Promise<void> {
-    assert(this.loaded);
-
-    await this.cancelOrders();
-    await this.settleFunds();
-    await this.closeOpenOrders();
-
-    const transaction = new Transaction();
-    for (const position of Object.values<Position>(this.positions)) {
-      if (position.tokenAccount && Number(position.balance) == 0) {
-        transaction.add(
-          createCloseAccountInstruction(
-            position.tokenAccount,
-            this.owner!.publicKey,
-            this.owner!.publicKey,
-          ),
-        );
-      }
-    }
-    if (transaction.instructions.length > 0) {
-      await this.connection.sendAndConfirmTransaction(transaction, [
-        this.owner!,
-      ]);
-    }
-
-    //TODO close the margin account, transfer the tokens back to the user wallet.
-
-    this.loaded = false;
-  }
+  abstract closeAccount(): Promise<void>;
 
   async closeOpenOrders(): Promise<void> {
     await SerumMarket.closeOpenOrders(

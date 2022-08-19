@@ -1,10 +1,5 @@
 //TODO load this from a package.
-import {
-  MarginAccount,
-  Order,
-  PythOracle,
-  Market,
-} from '../../../bot-sdk/src/';
+import { Order, Protocol, PythOracle, Market } from '../../../bot-sdk/src/';
 
 import { Bot } from './bot';
 
@@ -28,15 +23,12 @@ export class Maker extends Bot {
 
   instruments: Instrument[] = [];
 
-  constructor(
-    marginAccount: MarginAccount,
-    oracles: Record<string, PythOracle>,
-  ) {
-    super(marginAccount);
+  constructor(protocol: Protocol, oracles: Record<string, PythOracle>) {
+    super(protocol);
     this.oracles = oracles;
 
-    for (const market of Object.values<Market>(this.marginAccount.markets)) {
-      this.marginAccount.setLimits({
+    for (const market of Object.values<Market>(this.protocol.markets)) {
+      this.protocol.setLimits({
         symbol: market.marketConfiguration.baseSymbol,
         maxOrderAmount: PARAMS.maxOrderAmount,
         maxPositionAmount: PARAMS.maxPositionAmount,

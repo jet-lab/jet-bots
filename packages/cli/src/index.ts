@@ -5,10 +5,10 @@ import figlet from 'figlet';
 import yargs from 'yargs/yargs';
 
 import {
-  MarginAccount,
   Market,
+  Protocol,
   SerumMarket,
-  SolanaMarginAccount,
+  SolanaProtocol,
 } from '../../bot-sdk/src/';
 
 function sleep(ms: number) {
@@ -54,9 +54,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.airdrop(argv.s, argv.a);
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.airdrop(argv.s, argv.a);
     },
     asks: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -69,8 +69,8 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v);
-      await marginAccount.printAsks(argv.m);
+      const protocol = new SolanaProtocol(argv.c, argv.v);
+      await protocol.printAsks(argv.m);
     },
     'ask-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -83,8 +83,8 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v);
-      await marginAccount.printAskOrders(argv.m);
+      const protocol = new SolanaProtocol(argv.c, argv.v);
+      await protocol.printAskOrders(argv.m);
     },
     balance: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -97,9 +97,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      marginAccount.printBalance();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      protocol.printBalance();
     },
     bids: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -112,8 +112,8 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v);
-      await marginAccount.printBids(argv.m);
+      const protocol = new SolanaProtocol(argv.c, argv.v);
+      await protocol.printBids(argv.m);
     },
     'bid-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -126,8 +126,8 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v);
-      await marginAccount.printBidOrders(argv.m);
+      const protocol = new SolanaProtocol(argv.c, argv.v);
+      await protocol.printBidOrders(argv.m);
     },
     'cancel-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -140,9 +140,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.cancelOrders();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.cancelOrders();
     },
     close: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -155,9 +155,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.closeMarginAccount();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.closeAccount();
     },
     'close-open-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -170,8 +170,8 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.closeOpenOrders();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.closeOpenOrders();
     },
     crank: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -184,9 +184,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      for (const market of Object.values<Market>(marginAccount.markets)) {
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      for (const market of Object.values<Market>(protocol.markets)) {
         if (market instanceof SerumMarket) {
           await market.crank();
         }
@@ -197,7 +197,7 @@ async function run() {
         c: { alias: 'cluster', required: true, type: 'string' },
         k: { alias: 'keyfile', required: true, type: 'string' },
       }).argv;
-      await SolanaMarginAccount.createMarginAccount(argv.c, argv.k);
+      await SolanaProtocol.createAccount(argv.c, argv.k);
     },
     'create-open-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -210,9 +210,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.createOpenOrders();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.createOpenOrders();
     },
     'create-token-accounts': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -225,9 +225,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.createTokenAccounts();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.createTokenAccounts();
     },
     deposit: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -242,9 +242,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.deposit(argv.t, argv.a);
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.deposit(argv.t, argv.a);
     },
     'listen-open-orders': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -257,9 +257,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      for (const market of Object.values<Market>(marginAccount.markets)) {
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      for (const market of Object.values<Market>(protocol.markets)) {
         if (market instanceof SerumMarket) {
           await market.listenOpenOrders();
         }
@@ -277,9 +277,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      marginAccount.printOpenOrders();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      protocol.printOpenOrders();
     },
     'send-test-order': async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -296,10 +296,10 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      marginAccount.sendTestOrder(argv.m, argv.t, argv.p, argv.s);
-      const market = marginAccount.markets[argv.m];
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      protocol.sendTestOrder(argv.m, argv.t, argv.p, argv.s);
+      const market = protocol.markets[argv.m];
       await market.crank();
     },
     'settle-funds': async () => {
@@ -313,9 +313,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.settleFunds();
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.settleFunds();
     },
     withdraw: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
@@ -330,9 +330,9 @@ async function run() {
           default: true,
         },
       }).argv;
-      const marginAccount = new SolanaMarginAccount(argv.c, argv.v, argv.k);
-      await marginAccount.load();
-      await marginAccount.withdraw(argv.s, argv.a);
+      const protocol = new SolanaProtocol(argv.c, argv.v, argv.k);
+      await protocol.load();
+      await protocol.withdraw(argv.s, argv.a);
     },
   };
 

@@ -3,7 +3,7 @@ import assert from 'assert';
 
 import { Configuration, MarketConfiguration } from '../configuration';
 import { Connection } from '../connection';
-import { Position } from '../margin-accounts/position';
+import { Position } from '../protocols/position';
 
 export interface Order {
   dex: 'serum';

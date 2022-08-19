@@ -1,6 +1,6 @@
-import { MarginAccount } from '../marginAccount';
+import { Protocol } from '../protocol';
 
-export class MarginfiMarginAccount extends MarginAccount {
+export class JetProtocol extends Protocol {
   constructor(
     cluster: string,
     verbose: boolean,
@@ -8,5 +8,9 @@ export class MarginfiMarginAccount extends MarginAccount {
     symbols?: string[],
   ) {
     super(cluster, verbose, keyfile, symbols);
+  }
+
+  async closeAccount(): Promise<void> {
+    throw new Error('Implement.');
   }
 }

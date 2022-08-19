@@ -1,18 +1,18 @@
 //TODO load this from a package.
-import { MarginAccount, Order } from '../../../bot-sdk/src/';
+import { Order, Protocol } from '../../../bot-sdk/src/';
 
 export abstract class Bot {
-  marginAccount: MarginAccount;
+  protocol: Protocol;
 
-  constructor(marginAccount: MarginAccount) {
-    this.marginAccount = marginAccount;
+  constructor(protocol: Protocol) {
+    this.protocol = protocol;
   }
 
   abstract process(): Promise<void>;
 
   sendOrders(orders: Order[]): void {
-    if (this.marginAccount) {
-      this.marginAccount.sendOrders(orders);
+    if (this.protocol) {
+      this.protocol.sendOrders(orders);
     }
   }
 }

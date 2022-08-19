@@ -1,21 +1,21 @@
 import assert from 'assert';
 
 //TODO load this from a package.
-import { MarginAccount } from '../../../bot-sdk/src/';
+import { Protocol } from '../../../bot-sdk/src/';
 
 import { Bot } from './bot';
 
 export class Crank extends Bot {
-  constructor(marginAccount: MarginAccount) {
-    super(marginAccount);
+  constructor(protocol: Protocol) {
+    super(protocol);
 
     assert(
-      marginAccount.configuration.cluster == 'devnet' ||
-        marginAccount.configuration.cluster == 'localnet',
+      protocol.configuration.cluster == 'devnet' ||
+        protocol.configuration.cluster == 'localnet',
     );
   }
 
   async process(): Promise<void> {
-    await this.marginAccount!.crank();
+    await this.protocol!.crank();
   }
 }
