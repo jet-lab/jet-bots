@@ -1,5 +1,7 @@
 #!/usr/bin/env ts-node
 
+import chalk from 'chalk';
+import figlet from 'figlet';
 import yargs from 'yargs/yargs';
 
 import {
@@ -339,7 +341,9 @@ async function run() {
     console.log(`Unknown command: ${command}.`);
   } else {
     console.log('');
-    console.log(`jet ${command}`);
+    console.log(
+      chalk.cyan(figlet.textSync(`jet-bots`, { horizontalLayout: 'full' })),
+    );
     console.log('');
     commands[command]();
   }

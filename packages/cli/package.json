@@ -18,6 +18,8 @@
     "@solana/spl-token": "^0.2.0",
     "@tsconfig/recommended": "^1.0.1",
     "bs58": "^5.0.0",
+    "chalk": "4.1.2",
+    "figlet": "^1.5.2",
     "ts-node": "^10.9.1",
     "yargs": "^17.4.1"
   },
