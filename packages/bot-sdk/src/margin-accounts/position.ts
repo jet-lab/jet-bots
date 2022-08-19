@@ -27,9 +27,12 @@ export class Position {
   tokenAccount?: PublicKey;
   balance: bigint;
 
+  lastOrderTimestamp: number = 0;
+
   // Limits
   maxOrderAmount: number = 0;
   maxPositionAmount: number = 0;
+  minOrderInterval: number = 0;
   minPositionAmount: number = 0;
 
   constructor(

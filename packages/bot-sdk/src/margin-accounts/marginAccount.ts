@@ -595,9 +595,18 @@ export abstract class MarginAccount {
 
     (async () => {
       try {
+        const timestamp: number = Date.now();
+
         //TODO First clip orders and filter the orders array to exclude orders with zero size.
         orders = orders.filter(order => {
-          return order.price > 0 && order.size > 0;
+          const market = this.markets[order.symbol];
+          const position = market.basePosition;
+          return (
+            order.price > 0 &&
+            order.size > 0 &&
+            (timestamp - position.lastOrderTimestamp) / 1000 >
+              position.minOrderInterval
+          );
         });
 
         const transaction = new Transaction();
@@ -700,6 +709,8 @@ export abstract class MarginAccount {
               assert(market.basePosition.tokenAccount);
               assert(market.quotePosition);
               assert(market.quotePosition.tokenAccount);
+
+              market.basePosition.lastOrderTimestamp = timestamp;
 
               if (this.configuration.verbose) {
                 console.log(`  SEND ORDER`);
@@ -817,19 +828,21 @@ export abstract class MarginAccount {
     }
   }
 
-  async setLimits(
-    symbol: string,
-    maxOrderAmount: number,
-    maxPositionAmount: number,
-    minPositionAmount: number,
-  ): Promise<void> {
-    assert(minPositionAmount <= maxPositionAmount);
+  async setLimits(limits: {
+    symbol: string;
+    maxOrderAmount: number;
+    maxPositionAmount: number;
+    minOrderInterval: number;
+    minPositionAmount: number;
+  }): Promise<void> {
+    assert(limits.minPositionAmount <= limits.maxPositionAmount);
 
-    const position = this.positions[symbol];
+    const position = this.positions[limits.symbol];
     assert(position);
-    position.maxOrderAmount = maxOrderAmount;
-    position.maxPositionAmount = maxPositionAmount;
-    position.minPositionAmount = minPositionAmount;
+    position.maxOrderAmount = limits.maxOrderAmount;
+    position.maxPositionAmount = limits.maxPositionAmount;
+    position.minOrderInterval = limits.minOrderInterval;
+    position.minPositionAmount = limits.minPositionAmount;
 
     //TODO write this to the user's margin account settings on-chain.
   }

@@ -14,6 +14,7 @@ import { Bot } from './bot';
 const PARAMS = {
   maxOrderAmount: 100,
   maxPositionAmount: 1_000,
+  minOrderInterval: 1,
   minPositionAmount: -1_000,
   takeProbability: 0.1,
 };
@@ -28,12 +29,13 @@ export class Taker extends Bot {
     );
 
     for (const market of Object.values<Market>(this.marginAccount.markets)) {
-      this.marginAccount.setLimits(
-        market.marketConfiguration.baseSymbol,
-        PARAMS.maxOrderAmount,
-        PARAMS.maxPositionAmount,
-        PARAMS.minPositionAmount,
-      );
+      this.marginAccount.setLimits({
+        symbol: market.marketConfiguration.baseSymbol,
+        maxOrderAmount: PARAMS.maxOrderAmount,
+        maxPositionAmount: PARAMS.maxPositionAmount,
+        minOrderInterval: PARAMS.minOrderInterval,
+        minPositionAmount: PARAMS.minPositionAmount,
+      });
     }
   }
 

@@ -11,6 +11,7 @@ import { Bot } from './bot';
 const PARAMS = {
   maxOrderAmount: 100,
   maxPositionAmount: 1_000,
+  minOrderInterval: 5,
   minPositionAmount: -1_000,
   repriceBPS: 5, //TODO
   spreadBPS: 20,
@@ -35,13 +36,13 @@ export class Maker extends Bot {
     this.oracles = oracles;
 
     for (const market of Object.values<Market>(this.marginAccount.markets)) {
-      this.marginAccount.setLimits(
-        market.marketConfiguration.baseSymbol,
-        PARAMS.maxOrderAmount,
-        PARAMS.maxPositionAmount,
-        PARAMS.minPositionAmount,
-      );
-
+      this.marginAccount.setLimits({
+        symbol: market.marketConfiguration.baseSymbol,
+        maxOrderAmount: PARAMS.maxOrderAmount,
+        maxPositionAmount: PARAMS.maxPositionAmount,
+        minOrderInterval: PARAMS.minOrderInterval,
+        minPositionAmount: PARAMS.minPositionAmount,
+      });
       this.instruments.push({
         market,
         baseOracle: oracles[market.marketConfiguration.baseSymbol + '/USD'],
