@@ -9,9 +9,9 @@ import {
 import { Bot } from './bot';
 
 const PARAMS = {
-  maxPosition: 1_000,
-  minPosition: -1_000,
-  orderSize: 100,
+  maxOrderAmount: 100,
+  maxPositionAmount: 1_000,
+  minPositionAmount: -1_000,
   repriceBPS: 5, //TODO
   spreadBPS: 20,
 };
@@ -37,8 +37,9 @@ export class Maker extends Bot {
     for (const market of Object.values<Market>(this.marginAccount.markets)) {
       this.marginAccount.setLimits(
         market.marketConfiguration.baseSymbol,
-        PARAMS.minPosition,
-        PARAMS.maxPosition,
+        PARAMS.maxOrderAmount,
+        PARAMS.maxPositionAmount,
+        PARAMS.minPositionAmount,
       );
 
       this.instruments.push({
@@ -66,7 +67,7 @@ export class Maker extends Bot {
           symbol: instrument.market.marketConfiguration.symbol,
           side: 'buy',
           price: bidPrice,
-          size: PARAMS.orderSize,
+          size: PARAMS.maxOrderAmount / bidPrice,
           orderType: 'limit',
           selfTradeBehavior: 'cancelProvide',
         });
@@ -75,7 +76,7 @@ export class Maker extends Bot {
           symbol: instrument.market.marketConfiguration.symbol,
           side: 'sell',
           price: askPrice,
-          size: PARAMS.orderSize,
+          size: PARAMS.maxOrderAmount / askPrice,
           orderType: 'limit',
           selfTradeBehavior: 'cancelProvide',
         });

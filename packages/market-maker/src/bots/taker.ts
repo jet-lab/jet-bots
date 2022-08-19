@@ -12,8 +12,9 @@ import {
 import { Bot } from './bot';
 
 const PARAMS = {
-  maxPosition: 1_000,
-  minPosition: -1_000,
+  maxOrderAmount: 100,
+  maxPositionAmount: 1_000,
+  minPositionAmount: -1_000,
   takeProbability: 0.1,
 };
 
@@ -29,8 +30,9 @@ export class Taker extends Bot {
     for (const market of Object.values<Market>(this.marginAccount.markets)) {
       this.marginAccount.setLimits(
         market.marketConfiguration.baseSymbol,
-        PARAMS.minPosition,
-        PARAMS.maxPosition,
+        PARAMS.maxOrderAmount,
+        PARAMS.maxPositionAmount,
+        PARAMS.minPositionAmount,
       );
     }
   }
@@ -55,7 +57,7 @@ export class Taker extends Bot {
                 symbol: market.marketConfiguration.symbol,
                 side: 'sell',
                 price,
-                size,
+                size: PARAMS.maxOrderAmount / price,
                 orderType: 'limit',
                 selfTradeBehavior: 'cancelProvide',
               });
@@ -76,7 +78,7 @@ export class Taker extends Bot {
                 symbol: market.marketConfiguration.symbol,
                 side: 'buy',
                 price,
-                size,
+                size: PARAMS.maxOrderAmount / price,
                 orderType: 'limit',
                 selfTradeBehavior: 'cancelProvide',
               });

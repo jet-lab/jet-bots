@@ -819,17 +819,17 @@ export abstract class MarginAccount {
 
   async setLimits(
     symbol: string,
-    minAmount: number,
-    maxAmount: number,
+    maxOrderAmount: number,
+    maxPositionAmount: number,
+    minPositionAmount: number,
   ): Promise<void> {
-    //console.log(`minAmount = ${minAmount}`);
-    //console.log(`maxAmount = ${maxAmount}`);
-    assert(minAmount <= maxAmount);
+    assert(minPositionAmount <= maxPositionAmount);
 
     const position = this.positions[symbol];
     assert(position);
-    position.minAmount = minAmount;
-    position.maxAmount = maxAmount;
+    position.maxOrderAmount = maxOrderAmount;
+    position.maxPositionAmount = maxPositionAmount;
+    position.minPositionAmount = minPositionAmount;
 
     //TODO write this to the user's margin account settings on-chain.
   }

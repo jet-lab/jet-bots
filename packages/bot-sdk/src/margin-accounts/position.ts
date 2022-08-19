@@ -28,8 +28,9 @@ export class Position {
   balance: bigint;
 
   // Limits
-  minAmount: number = 0;
-  maxAmount: number = 0;
+  maxOrderAmount: number = 0;
+  maxPositionAmount: number = 0;
+  minPositionAmount: number = 0;
 
   constructor(
     configuration: Configuration,
