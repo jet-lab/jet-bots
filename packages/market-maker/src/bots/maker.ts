@@ -1,7 +1,12 @@
 //TODO load this from a package.
-import { Order, SerumMarket } from '../../../bot-sdk/src/';
+import {
+  MarginAccount,
+  Order,
+  PythOracle,
+  Market,
+} from '../../../bot-sdk/src/';
 
-import { Bot, Context } from '../context';
+import { Bot } from './bot';
 
 const PARAMS = {
   maxPosition: 1_000,
@@ -12,43 +17,43 @@ const PARAMS = {
 };
 
 interface Instrument {
-  market: SerumMarket;
-  baseOracleSymbol: string;
-  quoteOracleSymbol: string;
+  market: Market;
+  baseOracle: PythOracle;
+  quoteOracle: PythOracle;
 }
 
 export class Maker extends Bot {
+  oracles: Record<string, PythOracle>;
+
   instruments: Instrument[] = [];
 
-  constructor(tradingContext: Context, marketDataContext: Context) {
-    super(tradingContext, marketDataContext);
+  constructor(
+    marginAccount: MarginAccount,
+    oracles: Record<string, PythOracle>,
+  ) {
+    super(marginAccount);
+    this.oracles = oracles;
 
-    for (const market of Object.values<SerumMarket>(
-      this.tradingContext.markets,
-    )) {
-      if (this.tradingContext.marginAccount) {
-        this.tradingContext.marginAccount.setLimits(
-          market.marketConfiguration.baseSymbol,
-          PARAMS.minPosition,
-          PARAMS.maxPosition,
-        );
-      }
+    for (const market of Object.values<Market>(this.marginAccount.markets)) {
+      this.marginAccount.setLimits(
+        market.marketConfiguration.baseSymbol,
+        PARAMS.minPosition,
+        PARAMS.maxPosition,
+      );
 
       this.instruments.push({
         market,
-        baseOracleSymbol: market.marketConfiguration.baseSymbol + '/USD',
-        quoteOracleSymbol: market.marketConfiguration.quoteSymbol + '/USD',
+        baseOracle: oracles[market.marketConfiguration.baseSymbol + '/USD'],
+        quoteOracle: oracles[market.marketConfiguration.quoteSymbol + '/USD'],
       });
     }
   }
 
-  process(): void {
+  async process(): Promise<void> {
     for (const instrument of this.instruments) {
       const orders: Order[] = [];
-      const basePrice =
-        this.marketDataContext.oracles[instrument.baseOracleSymbol].price;
-      const quotePrice =
-        this.marketDataContext.oracles[instrument.quoteOracleSymbol].price;
+      const basePrice = instrument.baseOracle.price;
+      const quotePrice = instrument.quoteOracle.price;
       if (basePrice && basePrice.price && quotePrice && quotePrice.price) {
         const fairPrice = basePrice.price / quotePrice.price;
         const askPrice = fairPrice + fairPrice * (PARAMS.spreadBPS / 10_000);
@@ -57,6 +62,7 @@ export class Maker extends Bot {
         //TODO only update orders if the price has moved significantly using repriceBPS.
 
         orders.push({
+          market: 'serum',
           symbol: instrument.market.marketConfiguration.symbol,
           side: 'buy',
           price: bidPrice,
@@ -65,6 +71,7 @@ export class Maker extends Bot {
           selfTradeBehavior: 'cancelProvide',
         });
         orders.push({
+          market: 'serum',
           symbol: instrument.market.marketConfiguration.symbol,
           side: 'sell',
           price: askPrice,

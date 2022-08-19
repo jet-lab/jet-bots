@@ -1,7 +1,6 @@
 import {
   Commitment,
   Connection as SolanaConnection,
-  ConnectionConfig,
   SendOptions,
   SignatureResult,
   Signer,
@@ -11,12 +10,8 @@ import {
 export class Connection extends SolanaConnection {
   verbose: boolean;
 
-  constructor(
-    endpoint: string,
-    commitmentOrConfig: Commitment | ConnectionConfig,
-    verbose: boolean,
-  ) {
-    super(endpoint, commitmentOrConfig);
+  constructor(endpoint: string, verbose: boolean) {
+    super(endpoint, 'processed' as Commitment);
     this.verbose = verbose;
   }
 

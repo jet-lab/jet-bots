@@ -1,35 +1,236 @@
 import { BN } from '@project-serum/anchor';
-import { Market, Orderbook } from '@project-serum/serum';
+import {
+  DexInstructions,
+  Market as SpotMarket,
+  OpenOrders,
+  Orderbook,
+} from '@project-serum/serum';
 import { MARKET_STATE_LAYOUT_V2 } from '@project-serum/serum/lib/market';
 import { decodeEventQueue, Event } from '@project-serum/serum/lib/queue';
 import {
+  Account,
   AccountInfo,
   Commitment,
-  Connection,
   Context,
   PublicKey,
+  Transaction,
 } from '@solana/web3.js';
 import assert from 'assert';
 
-import { MarketConfiguration } from '../../configuration';
-import { Market as MarketBase } from '../market';
+import { Configuration, MarketConfiguration } from '../../configuration';
+import { Connection } from '../../connection';
+import { Position } from '../../margin-accounts/position';
+import { Market } from '../market';
 
-export class SerumMarket extends MarketBase {
-  connection: Connection;
-  market?: Market;
+export class SerumMarket extends Market {
+  market?: SpotMarket;
   asks?: Orderbook;
   bids?: Orderbook;
   events: Event[] = [];
-  eventsAccountInfo?: Buffer;
   seqNum: number = 0;
+
+  openOrders?: OpenOrders;
+
+  // This is used when we want to run our own crank.
+  payer?: Account;
+  eventsBuffer?: Buffer;
   hasEvents: boolean = false;
 
   constructor(
+    configuration: Configuration,
     marketConfiguration: MarketConfiguration,
+    positions: Record<string, Position>,
     connection: Connection,
+    payer?: Account,
   ) {
-    super(marketConfiguration);
-    this.connection = connection;
+    super(configuration, marketConfiguration, positions, connection);
+    this.payer = payer;
+  }
+
+  static async closeOpenOrders(
+    configuration: Configuration,
+    connection: Connection,
+    owner: Account,
+  ): Promise<void> {
+    const transaction = new Transaction();
+    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+      connection,
+      owner.publicKey,
+      configuration.serumProgramId,
+    );
+    for (const openOrdersAccount of openOrdersAccounts) {
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
+        configuration.serumProgramId,
+      );
+      let hasOrders = false;
+      openOrders.orders.forEach(orderId => {
+        if (!orderId.eq(new BN(0))) hasOrders = true;
+      });
+      if (hasOrders) {
+        if (configuration.verbose) {
+          console.log(
+            `OpenOrders account still has open orders: ${openOrdersAccount.publicKey}`,
+          );
+        }
+        continue;
+      }
+
+      if (
+        Number(openOrders.baseTokenFree) > 0 ||
+        Number(openOrders.quoteTokenFree) > 0
+      ) {
+        const marketConfig = Object.values<MarketConfiguration>(
+          configuration.markets,
+        ).find(marketConfig => {
+          return marketConfig.market.toBase58() == openOrders.market.toBase58();
+        });
+        if (marketConfig) {
+          if (configuration.verbose) {
+            console.log(
+              `OpenOrders account still has unsettled funds: ${openOrdersAccount.publicKey}`,
+            );
+          }
+        }
+        continue;
+      } else {
+        transaction.add(
+          DexInstructions.closeOpenOrders({
+            market: new PublicKey(openOrders.market),
+            openOrders: openOrdersAccount.publicKey,
+            owner: owner.publicKey,
+            solWallet: owner.publicKey,
+            programId: configuration.serumProgramId,
+          }),
+        );
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      const result = await connection.sendAndConfirmTransaction(transaction, [
+        owner,
+      ]);
+      if (result.err) {
+        const errorCode: number =
+          result.err.valueOf()['InstructionError'][1]['Custom'];
+        console.log(`SERUM ERROR: ${getSerumError(errorCode)}`);
+      }
+    }
+  }
+
+  async crank(): Promise<void> {
+    const consumeEventsLimit = 10;
+    const transaction = new Transaction();
+    const basePosition = this.basePosition;
+    const quotePosition = this.quotePosition;
+    if (basePosition.tokenAccount && quotePosition.tokenAccount) {
+      if (this.hasEvents) {
+        assert(this.eventsBuffer);
+        const events = decodeEventQueue(this.eventsBuffer);
+        if (events.length > 0) {
+          const accounts: Set<PublicKey> = new Set();
+          for (const event of events) {
+            if (this.configuration.verbose) {
+              console.log(`consumeEvents ${event.openOrders}`);
+            }
+            accounts.add(event.openOrders);
+            if (accounts.size >= consumeEventsLimit) break;
+            const openOrdersAccounts = [...accounts]
+              .map(s => new PublicKey(s))
+              .sort((a, b) =>
+                a.toBuffer().swap64().compare(b.toBuffer().swap64()),
+              );
+            transaction.add(
+              DexInstructions.consumeEvents({
+                market: this.marketConfiguration.market,
+                eventQueue: this.marketConfiguration.eventQueue,
+                coinFee: basePosition.tokenAccount,
+                pcFee: quotePosition.tokenAccount,
+                openOrdersAccounts,
+                limit: new BN(consumeEventsLimit),
+                programId: this.configuration.serumProgramId,
+              }),
+            );
+          }
+        }
+        this.hasEvents = false;
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      transaction.feePayer = this.payer!.publicKey;
+      await this.connection.sendTransaction(transaction, [this.payer!]);
+    }
+  }
+
+  static async createOpenOrders(
+    configuration: Configuration,
+    connection: Connection,
+    owner: Account,
+    markets: Market[],
+  ): Promise<void> {
+    const publicKeys: PublicKey[] = [];
+    const transaction = new Transaction();
+    const signers: Account[] = [];
+    for (const market of markets) {
+      assert(market.marketConfiguration);
+      if (market instanceof SerumMarket) {
+        assert(market.market);
+        if (!market.openOrders) {
+          const openOrdersAccount = new Account();
+          publicKeys.push(openOrdersAccount.publicKey);
+          transaction.add(
+            await OpenOrders.makeCreateAccountTransaction(
+              connection,
+              market.market.address,
+              owner.publicKey,
+              openOrdersAccount.publicKey,
+              configuration.serumProgramId,
+            ),
+            DexInstructions.initOpenOrders({
+              market: market.market!.address,
+              openOrders: openOrdersAccount.publicKey,
+              owner: owner.publicKey,
+              programId: configuration.serumProgramId,
+              marketAuthority: undefined,
+            }),
+          );
+          signers.push(owner);
+          signers.push(openOrdersAccount);
+        }
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      const result = await connection.sendAndConfirmTransaction(
+        transaction,
+        signers,
+      );
+      if (result.err) {
+        const errorCode: number =
+          result.err.valueOf()['InstructionError'][1]['Custom'];
+        console.log(`SERUM ERROR: ${getSerumError(errorCode)}`);
+      }
+    }
+
+    const openOrdersAccounts = await connection.getMultipleAccountsInfo(
+      publicKeys,
+    );
+
+    for (const market of markets) {
+      if (market instanceof SerumMarket) {
+        assert(market.market);
+        if (!market.openOrders) {
+          const publicKey = publicKeys.shift();
+          assert(publicKey);
+          const openOrdersAccount = openOrdersAccounts.shift();
+          assert(openOrdersAccount);
+          market.openOrders = OpenOrders.fromAccountInfo(
+            publicKey,
+            openOrdersAccount,
+            configuration.serumProgramId,
+          );
+        }
+      }
+    }
   }
 
   async listen(): Promise<void> {
@@ -51,10 +252,10 @@ export class SerumMarket extends MarketBase {
       this.connection.onAccountChange(
         (this.market as any)._decoded.eventQueue,
         (accountInfo: AccountInfo<Buffer>, context: Context) => {
-          this.eventsAccountInfo = accountInfo!.data;
+          this.eventsBuffer = accountInfo!.data;
+          this.hasEvents = true;
           this.events = decodeEventQueue(accountInfo!.data, this.seqNum);
           for (const event of this.events) {
-            this.hasEvents = true;
             if (event.seqNum) {
               this.seqNum = event.seqNum;
             }
@@ -62,60 +263,117 @@ export class SerumMarket extends MarketBase {
         },
         'processed' as Commitment,
       );
+
+      if (this.openOrders) {
+        await this.listenOpenOrders();
+      }
+    }
+  }
+
+  async listenOpenOrders(): Promise<void> {
+    assert(this.openOrders);
+    this.connection.onAccountChange(
+      this.openOrders.address,
+      (accountInfo: AccountInfo<Buffer>, context: Context) => {
+        assert(this.openOrders);
+        this.openOrders = OpenOrders.fromAccountInfo(
+          this.openOrders.address,
+          accountInfo,
+          this.configuration.serumProgramId,
+        );
+      },
+      'confirmed' as Commitment,
+    );
+    if (this.configuration.verbose) {
+      console.log(
+        `Listening to OpenOrders for ${this.marketConfiguration.symbol}`,
+      );
     }
   }
 
   static async load(
     connection: Connection,
+    owner: PublicKey,
     programId: PublicKey,
-    markets: SerumMarket[],
+    markets: Market[],
   ): Promise<void> {
     const publicKeys: PublicKey[] = [];
     for (const market of markets) {
-      assert(market.marketConfiguration.market);
-      publicKeys.push(new PublicKey(market.marketConfiguration.market));
-      assert(market.marketConfiguration.bids);
-      publicKeys.push(new PublicKey(market.marketConfiguration.bids));
-      assert(market.marketConfiguration.asks);
-      publicKeys.push(new PublicKey(market.marketConfiguration.asks));
-      assert(market.marketConfiguration.eventQueue);
-      publicKeys.push(new PublicKey(market.marketConfiguration.eventQueue));
+      if (market instanceof SerumMarket) {
+        assert(market.marketConfiguration.market);
+        publicKeys.push(new PublicKey(market.marketConfiguration.market));
+        assert(market.marketConfiguration.bids);
+        publicKeys.push(new PublicKey(market.marketConfiguration.bids));
+        assert(market.marketConfiguration.asks);
+        publicKeys.push(new PublicKey(market.marketConfiguration.asks));
+        assert(market.marketConfiguration.eventQueue);
+        publicKeys.push(new PublicKey(market.marketConfiguration.eventQueue));
+      }
     }
     const accounts = await connection.getMultipleAccountsInfo(publicKeys);
     let j = 0;
     for (let i = 0; i < accounts.length; ) {
       const market = markets[j];
       j++;
-      if (accounts[i]) {
-        const decoded = MARKET_STATE_LAYOUT_V2.decode(accounts[i]!.data);
-        assert(market.marketConfiguration.baseDecimals);
-        assert(market.marketConfiguration.quoteDecimals);
-        market.market = new Market(
-          decoded,
-          market.marketConfiguration.baseDecimals,
-          market.marketConfiguration.quoteDecimals,
-          {},
-          programId,
-        );
-      }
-      i++;
-      if (market.market && accounts[i]) {
-        market.bids = Orderbook.decode(market.market, accounts[i]!.data);
-      }
-      i++;
-      if (market.market && accounts[i]) {
-        market.asks = Orderbook.decode(market.market, accounts[i]!.data);
-      }
-      i++;
-      if (market.market && accounts[i]) {
-        market.events = decodeEventQueue(accounts[i]!.data);
-        for (const event of market.events) {
-          if (event.seqNum) {
-            market.seqNum = event.seqNum;
+      if (market instanceof SerumMarket) {
+        if (accounts[i]) {
+          const decoded = MARKET_STATE_LAYOUT_V2.decode(accounts[i]!.data);
+          assert(market.marketConfiguration.baseDecimals);
+          assert(market.marketConfiguration.quoteDecimals);
+          market.market = new SpotMarket(
+            decoded,
+            market.marketConfiguration.baseDecimals,
+            market.marketConfiguration.quoteDecimals,
+            {},
+            programId,
+          );
+        }
+        i++;
+        if (market.market && accounts[i]) {
+          market.bids = Orderbook.decode(market.market, accounts[i]!.data);
+        }
+        i++;
+        if (market.market && accounts[i]) {
+          market.asks = Orderbook.decode(market.market, accounts[i]!.data);
+        }
+        i++;
+        if (market.market && accounts[i]) {
+          market.eventsBuffer = accounts[i]!.data;
+          market.hasEvents = true;
+          market.events = decodeEventQueue(accounts[i]!.data);
+          for (const event of market.events) {
+            if (event.seqNum) {
+              market.seqNum = event.seqNum;
+            }
           }
         }
+        i++;
       }
-      i++;
+    }
+
+    const openOrdersAccounts = await findOpenOrdersAccountsForOwner(
+      connection,
+      owner,
+      programId,
+    );
+
+    for (const openOrdersAccount of openOrdersAccounts) {
+      const openOrders = OpenOrders.fromAccountInfo(
+        openOrdersAccount.publicKey,
+        openOrdersAccount.accountInfo,
+        programId,
+      );
+
+      const market = markets.find(markets => {
+        return (
+          markets.marketConfiguration.market.toBase58() ==
+          openOrders.market.toBase58()
+        );
+      });
+
+      if (market && market instanceof SerumMarket) {
+        market.openOrders = openOrders;
+      }
     }
   }
 
@@ -173,6 +431,60 @@ export class SerumMarket extends MarketBase {
     };
   }
 
+  static async settleFunds(
+    connection: Connection,
+    owner: Account,
+    markets: Market[],
+  ) {
+    const transaction = new Transaction();
+    for (const market of markets) {
+      if (market instanceof SerumMarket) {
+        if (market.openOrders) {
+          if (
+            market.openOrders.baseTokenFree.gt(new BN(0)) ||
+            market.openOrders.quoteTokenFree.gt(new BN(0))
+          ) {
+            const vaultSigner = await PublicKey.createProgramAddress(
+              [
+                market.market!.address.toBuffer(),
+                market.market!.decoded.vaultSignerNonce.toArrayLike(
+                  Buffer,
+                  'le',
+                  8,
+                ),
+              ],
+              market.market!.programId,
+            );
+            transaction.add(
+              DexInstructions.settleFunds({
+                market: market.market!.address,
+                openOrders: market.openOrders!.address,
+                owner: owner.publicKey,
+                baseVault: market.market!.decoded.baseVault,
+                quoteVault: market.market!.decoded.quoteVault,
+                baseWallet: market.basePosition.tokenAccount,
+                quoteWallet: market.quotePosition.tokenAccount,
+                vaultSigner,
+                programId: market.market!.programId,
+                referrerQuoteWallet: market.quotePosition.tokenAccount,
+              }),
+            );
+          }
+        }
+      }
+    }
+    if (transaction.instructions.length > 0) {
+      const result = await connection.sendAndConfirmTransaction(transaction, [
+        owner,
+      ]);
+      if (result.err) {
+        const errorCode: number =
+          result.err.valueOf()['InstructionError'][1]['Custom'];
+        console.log(`SERUM ERROR: ${getSerumError(errorCode)}`);
+      }
+    }
+  }
+
   toPriceLevels(orderBook: Orderbook, depth: number = 8): [number, number][] {
     const descending = orderBook.isBids;
     const levels: [BN, BN][] = [];
@@ -198,6 +510,47 @@ function divideBnToNumber(numerator: BN, denominator: BN): number {
   const rem = numerator.umod(denominator);
   const gcd = rem.gcd(denominator);
   return quotient + rem.div(gcd).toNumber() / denominator.div(gcd).toNumber();
+}
+
+async function findOpenOrdersAccountsForOwner(
+  connection: Connection,
+  owner: PublicKey,
+  programId: PublicKey,
+): Promise<{ publicKey: PublicKey; accountInfo: AccountInfo<Buffer> }[]> {
+  const filters = [
+    {
+      memcmp: {
+        offset: OpenOrders.getLayout(programId).offsetOf('owner'),
+        bytes: owner.toBase58(),
+      },
+    },
+    {
+      dataSize: OpenOrders.getLayout(programId).span,
+    },
+  ];
+  // @ts-ignore
+  const resp = await connection._rpcRequest('getProgramAccounts', [
+    programId.toBase58(),
+    {
+      commitment: connection.commitment,
+      filters,
+      encoding: 'base64',
+    },
+  ]);
+  if (resp.error) {
+    throw new Error(resp.error.message);
+  }
+  return resp.result.map(
+    ({ pubkey, account: { data, executable, owner, lamports } }) => ({
+      publicKey: new PublicKey(pubkey),
+      accountInfo: {
+        data: Buffer.from(data[0], 'base64'),
+        executable,
+        owner: new PublicKey(owner),
+        lamports,
+      },
+    }),
+  );
 }
 
 export function getSerumError(errorCode: number): string {
