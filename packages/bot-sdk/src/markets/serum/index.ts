@@ -444,6 +444,9 @@ export class SerumMarket extends Market {
             market.openOrders.baseTokenFree.gt(new BN(0)) ||
             market.openOrders.quoteTokenFree.gt(new BN(0))
           ) {
+            if (market.configuration.verbose) {
+              console.log(`settleFunds ${market.openOrders!.address}`);
+            }
             const vaultSigner = await PublicKey.createProgramAddress(
               [
                 market.market!.address.toBuffer(),

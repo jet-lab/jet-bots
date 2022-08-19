@@ -56,30 +56,19 @@ class Controller {
       // Wait for the main loop to  exit.
       await sleep(this.interval);
 
-      /*
+      try {
+        await marginAccount.cancelOrders();
+      } catch (err) {
+        console.log(JSON.stringify(err));
+      }
+
       if (crank) {
         try {
-          crank.process();
+          await crank.process();
+          await marginAccount.settleFunds();
         } catch (err) {
           console.log(JSON.stringify(err));
         }
-      }
-
-      try {
-        if (marginAccount) {
-          await marginAccount.refreshOpenOrders();
-        }
-      } catch (err) {
-        console.log(JSON.stringify(err));
-      }
-      */
-
-      try {
-        if (marginAccount) {
-          await marginAccount.cancelOrders();
-        }
-      } catch (err) {
-        console.log(JSON.stringify(err));
       }
 
       console.log(`MARKET MAKER EXITED`);
@@ -113,6 +102,8 @@ async function run() {
     },
   }).argv;
 
+  //TODO if the user is on devnet or localnet and they don't have account ask them if they want to create one, if not exit.
+
   const marginAccount = new SolanaMarginAccount(
     args.c,
     args.v,
@@ -141,6 +132,8 @@ async function run() {
   await PythOracle.load(mainnetConnection, Object.values<PythOracle>(oracles));
 
   await marginAccount.load();
+
+  //TODO if the user is on devnet or localnet and they don't have tokens ask them if they want to get airdrops.
 
   const bot: Bot = createBot(args.b, marginAccount, oracles);
 
@@ -173,7 +166,8 @@ async function run() {
 
     if (crank) {
       try {
-        crank.process();
+        await crank.process();
+        await marginAccount.settleFunds();
       } catch (e) {
         console.log(e);
       }

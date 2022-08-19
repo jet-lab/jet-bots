@@ -638,21 +638,32 @@ export abstract class MarginAccount {
               );
             }
 
-            let orderExists = false;
+            let sendOrder = true;
+
+            let cancelOrder = false;
+            let openOrdersSlot = 0;
+            let orderId = ZERO_BN;
+            let side = 'buy';
 
             for (let i = 0; i < market.openOrders.orders.length; i++) {
-              const orderId = market.openOrders.orders[i];
+              openOrdersSlot = i;
+              orderId = market.openOrders.orders[i];
               if (orderId.gt(ZERO_BN)) {
+                side = market.openOrders.isBidBits.testn(i) ? 'buy' : 'sell';
                 const price = orderId.ushrn(64);
+
                 if (price.eq(priceLots)) {
-                  orderExists = true;
+                  sendOrder = false;
+                  break;
+                } else if (side == order.side) {
+                  cancelOrder = true;
                   break;
                 }
               }
             }
 
             if (
-              !orderExists &&
+              sendOrder &&
               baseQuantity.gt(ZERO_BN) &&
               quoteQuantity.gt(ZERO_BN)
             ) {
@@ -662,6 +673,19 @@ export abstract class MarginAccount {
               assert(market.quotePosition.tokenAccount);
 
               if (this.configuration.verbose) {
+                if (cancelOrder) {
+                  console.log(`  CANCEL ORDER`);
+                  console.log(
+                    `    market         = ${market.marketConfiguration.symbol}`,
+                  );
+                  console.log(
+                    `    openOrders     = ${market.openOrders.address}`,
+                  );
+                  console.log(`    side           = ${side}`);
+                  console.log(`    orderId        = ${orderId}`);
+                  console.log(`    openOrdersSlot = ${openOrdersSlot}`);
+                  console.log('');
+                }
                 console.log(`  SEND ORDER`);
                 console.log(`    order.clientId  = ${order.clientId}`);
                 console.log(`    order.orderType = ${order.orderType}`);
@@ -672,6 +696,22 @@ export abstract class MarginAccount {
                 console.log('');
               }
 
+              if (cancelOrder) {
+                transaction.add(
+                  DexInstructions.cancelOrderV2({
+                    market: market.marketConfiguration.market,
+                    owner: this.owner!.publicKey,
+                    openOrders: market.openOrders.address,
+                    bids: market.marketConfiguration.bids,
+                    asks: market.marketConfiguration.asks,
+                    eventQueue: market.marketConfiguration.eventQueue,
+                    side,
+                    orderId,
+                    openOrdersSlot,
+                    programId: this.configuration.serumProgramId,
+                  }),
+                );
+              }
               transaction.add(
                 DexInstructions.newOrderV3({
                   market: market.market!.address,
