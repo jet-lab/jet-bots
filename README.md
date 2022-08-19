@@ -54,6 +54,12 @@ yarn build
 
 ### Testing
 
+> If this is the first test, set up local devnet accounts (maker and taker accounts) before running test script.
+
+```
+bash ./packages/market-maker/scripts/create_devnet_accounts.sh
+```
+
 To run all tests:
 
 ```
