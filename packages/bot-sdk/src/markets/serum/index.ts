@@ -6,7 +6,11 @@ import {
   Orderbook,
 } from '@project-serum/serum';
 import { MARKET_STATE_LAYOUT_V2 } from '@project-serum/serum/lib/market';
-import { decodeEventQueue, Event } from '@project-serum/serum/lib/queue';
+import {
+  decodeEventsSince,
+  decodeEventQueue,
+  Event,
+} from '@project-serum/serum/lib/queue';
 import {
   Account,
   AccountInfo,
@@ -254,7 +258,47 @@ export class SerumMarket extends Market {
         (accountInfo: AccountInfo<Buffer>, context: Context) => {
           this.eventsBuffer = accountInfo!.data;
           this.hasEvents = true;
-          this.events = decodeEventQueue(accountInfo!.data, this.seqNum);
+          this.events = decodeEventsSince(accountInfo!.data, this.seqNum);
+          if (this.configuration.verbose && this.openOrders) {
+            for (const event of this.events) {
+              if (
+                event.seqNum &&
+                event.seqNum > this.seqNum &&
+                event.openOrders.equals(this.openOrders.address)
+              ) {
+                if (event.eventFlags.fill) {
+                  console.log(`  FILL`);
+                } else if (event.eventFlags.out) {
+                  console.log(`  OUT`);
+                } else {
+                  continue;
+                }
+                console.log(
+                  `    bid                    = ${event.eventFlags.bid}`,
+                );
+                console.log(
+                  `    maker                  = ${event.eventFlags.maker}`,
+                );
+                console.log(`    feeTier                = ${event.feeTier}`);
+                console.log(
+                  `    nativeQuantityPaid     = ${event.nativeFeeOrRebate}`,
+                );
+                console.log(
+                  `    nativeQuantityPaid     = ${event.nativeQuantityPaid}`,
+                );
+                console.log(
+                  `    nativeQuantityReleased = ${event.nativeQuantityReleased}`,
+                );
+                console.log(`    openOrders             = ${event.openOrders}`);
+                console.log(
+                  `    openOrdersSlot         = ${event.openOrdersSlot}`,
+                );
+                console.log(`    orderId                = ${event.orderId}`);
+                console.log(`    seqNum                 = ${event.seqNum}`);
+                console.log('');
+              }
+            }
+          }
           for (const event of this.events) {
             if (event.seqNum) {
               this.seqNum = event.seqNum;
@@ -340,7 +384,7 @@ export class SerumMarket extends Market {
         if (market.market && accounts[i]) {
           market.eventsBuffer = accounts[i]!.data;
           market.hasEvents = true;
-          market.events = decodeEventQueue(accounts[i]!.data);
+          market.events = decodeEventsSince(accounts[i]!.data, market.seqNum);
           for (const event of market.events) {
             if (event.seqNum) {
               market.seqNum = event.seqNum;
