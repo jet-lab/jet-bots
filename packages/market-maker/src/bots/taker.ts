@@ -1,8 +1,6 @@
+import { Market, Order, Protocol, SerumMarket } from '@jet-lab/bot-sdk';
 import { BN } from '@project-serum/anchor';
 import assert from 'assert';
-
-//TODO load this from a package.
-import { Market, Order, Protocol, SerumMarket } from '../../../bot-sdk/src/';
 
 import { Bot } from './bot';
 

@@ -1,5 +1,5 @@
 {
-  "name": "@jet-bots/simulation",
+  "name": "@jet-lab/simulation",
   "version": "1.0.0",
   "repository": "git@github.com:jet-lab/jet-bots.git",
   "description": "Initializes a local simulation environment.",

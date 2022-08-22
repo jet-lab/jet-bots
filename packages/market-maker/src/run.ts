@@ -1,11 +1,5 @@
 #!/usr/bin/env ts-node
 
-import { Keypair } from '@solana/web3.js';
-import assert from 'assert';
-import * as fs from 'fs';
-import yargs from 'yargs/yargs';
-
-//TODO load this from a package.
 import {
   Configuration,
   Connection,
@@ -13,7 +7,11 @@ import {
   Protocol,
   PythOracle,
   SolanaProtocol,
-} from '../../bot-sdk/src/';
+} from '@jet-lab/bot-sdk';
+import { Keypair } from '@solana/web3.js';
+import assert from 'assert';
+import * as fs from 'fs';
+import yargs from 'yargs/yargs';
 
 import { Bot } from './bots/bot';
 import { Crank } from './bots/crank';

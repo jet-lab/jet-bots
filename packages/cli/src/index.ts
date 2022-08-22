@@ -1,15 +1,14 @@
 #!/usr/bin/env ts-node
 
-import chalk from 'chalk';
-import figlet from 'figlet';
-import yargs from 'yargs/yargs';
-
 import {
   Market,
   Protocol,
   SerumMarket,
   SolanaProtocol,
-} from '../../bot-sdk/src/';
+} from '@jet-lab/bot-sdk';
+import chalk from 'chalk';
+import figlet from 'figlet';
+import yargs from 'yargs/yargs';
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));

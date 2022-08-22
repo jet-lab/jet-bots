@@ -1,9 +1,17 @@
 {
-  "name": "@jet-bots/bot-sdk",
-  "version": "1.0.0",
-  "repository": "git@github.com:jet-lab/jet-bots.git",
+  "name": "@jet-lab/bot-sdk",
+  "version": "0.0.2",
   "description": "SDK to support Jet bots.",
   "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "/lib"
+  ],
+  "repository": "git@github.com:jet-lab/jet-bots.git",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "rm -rf lib/",
     "build": "yarn clean && tsc"
