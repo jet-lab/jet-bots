@@ -1,11 +1,12 @@
 {
-  "lerna": "3.4.3",
+  "packages": ["packages/*"],
+  "version": "0.0.0",
   "npmClient": "yarn",
   "useWorkspaces": true,
-  "packages": ["packages/*"],
-  "version": "independent",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
+  "command": {
+    "publish": {
+      "conventionalCommits": true,
+      "yes": true
+    }
   }
 }

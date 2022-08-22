@@ -5,7 +5,7 @@ import {
   Protocol,
   SerumMarket,
   SolanaProtocol,
-} from '@jet-lab/bot-sdk';
+} from '@jet-lab/bot-sdk/src/index';
 import chalk from 'chalk';
 import figlet from 'figlet';
 import yargs from 'yargs/yargs';
@@ -39,7 +39,7 @@ async function waitForExit() {
 }
 
 async function run() {
-  const commands = {
+  const commands: any = {
     airdrop: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         a: { alias: 'amount', required: true, type: 'number' },
@@ -344,7 +344,7 @@ async function run() {
       chalk.cyan(figlet.textSync(`jet-bots`, { horizontalLayout: 'full' })),
     );
     console.log('');
-    commands[command]();
+    await commands[command]();
   }
 }
 

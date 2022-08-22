@@ -1,9 +1,7 @@
 {
-  "extends": "@tsconfig/recommended/tsconfig.json",
+  "extends": "@tsconfig/node12/tsconfig.json",
   "compilerOptions": {
-    "outDir": "lib",
-    "target": "es6",
-    "lib": ["es2019"],
+    "outDir": "./lib",
     "allowJs": true,
     "checkJs": true,
     "declaration": true,

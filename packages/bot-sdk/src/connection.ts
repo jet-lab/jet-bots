@@ -13,6 +13,7 @@ export class Connection extends SolanaConnection {
   constructor(endpoint: string, verbose: boolean) {
     super(endpoint, 'processed' as Commitment);
     this.verbose = verbose;
+    console.log(`CONNECT: ${endpoint}`);
   }
 
   async sendAndConfirmTransaction(
