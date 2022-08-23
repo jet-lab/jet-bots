@@ -35,22 +35,7 @@
 To get started first install the required build tools:
 
 ```
-npm install -g lerna
 npm install -g yarn
-```
-
-Then bootstrap the workspace:
-
-```
-yarn
-```
-
-### Building
-
-To build the workspace:
-
-```
-yarn build
 ```
 
 ### Testing

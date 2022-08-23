@@ -5,7 +5,7 @@ import {
   Protocol,
   SerumMarket,
   SolanaProtocol,
-} from '@jet-lab/bot-sdk/src/index';
+} from '@jet-lab/bot-sdk';
 import chalk from 'chalk';
 import figlet from 'figlet';
 import yargs from 'yargs/yargs';
