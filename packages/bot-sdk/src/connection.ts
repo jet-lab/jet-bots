@@ -13,6 +13,7 @@ export class Connection extends SolanaConnection {
   constructor(endpoint: string, verbose: boolean) {
     super(endpoint, 'processed' as Commitment);
     this.verbose = verbose;
+    console.log(`CONNECT: ${endpoint}`);
   }
 
   async sendAndConfirmTransaction(
@@ -28,6 +29,9 @@ export class Connection extends SolanaConnection {
     const { value } = await this.confirmTransaction(txid, commitment);
     if (value?.err) {
       console.log(`ERROR: ${JSON.stringify(value.err)}`);
+
+      const transactionResponse = await this.getTransaction(txid, { commitment: "confirmed" });
+      console.log(JSON.stringify(transactionResponse?.meta?.logMessages, undefined, 2));
     }
     return value;
   }

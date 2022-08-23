@@ -1,5 +1,4 @@
-//TODO load this from a package.
-import { Order, Protocol } from '../../../bot-sdk/src/';
+import { Order, Protocol } from '@jet-lab/bot-sdk';
 
 export abstract class Bot {
   protocol: Protocol;

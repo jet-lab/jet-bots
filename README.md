@@ -24,8 +24,9 @@
 
 | Package                                             | Version                                                                                                                   | Description                                             |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [`@jet-bots/market-maker`](/packages/market-maker)           | [![npm](https://img.shields.io/npm/v/@jet-bots/market-maker.svg)](https://www.npmjs.com/package@jet-bots/market-maker)           | Market Maker |
-| [`@jet-bots/simulation`](/packages/simulation)           | [![npm](https://img.shields.io/npm/v/@jet-bots/simulation.svg)](https://www.npmjs.com/package/@jet-bots/simulation)           | Simulation |
+| [`@jet-lab/bot-sdk`](/packages/bot-sdk)           | [![npm](https://img.shields.io/npm/v/@jet-lab/bot-sdk.svg)](https://www.npmjs.com/package@jet-lab/bot-sdk)           | Bot SDK |
+| [`@jet-lab/market-maker`](/packages/market-maker)           | [![npm](https://img.shields.io/npm/v/@jet-lab/market-maker.svg)](https://www.npmjs.com/package@jet-lab/market-maker)           | Market Maker |
+| [`@jet-lab/simulation`](/packages/simulation)           | [![npm](https://img.shields.io/npm/v/@jet-lab/simulation.svg)](https://www.npmjs.com/package/@jet-lab/simulation)           | Simulation |
 
 ## Contributing
 
@@ -34,22 +35,7 @@
 To get started first install the required build tools:
 
 ```
-npm install -g lerna
 npm install -g yarn
-```
-
-Then bootstrap the workspace:
-
-```
-yarn
-```
-
-### Building
-
-To build the workspace:
-
-```
-yarn build
 ```
 
 ### Testing

@@ -1,15 +1,14 @@
 #!/usr/bin/env ts-node
 
-import chalk from 'chalk';
-import figlet from 'figlet';
-import yargs from 'yargs/yargs';
-
 import {
   Market,
   Protocol,
   SerumMarket,
   SolanaProtocol,
-} from '../../bot-sdk/src/';
+} from '@jet-lab/bot-sdk';
+import chalk from 'chalk';
+import figlet from 'figlet';
+import yargs from 'yargs/yargs';
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -40,7 +39,7 @@ async function waitForExit() {
 }
 
 async function run() {
-  const commands = {
+  const commands: any = {
     airdrop: async () => {
       const argv = await yargs(process.argv.slice(3)).options({
         a: { alias: 'amount', required: true, type: 'number' },
@@ -345,7 +344,7 @@ async function run() {
       chalk.cyan(figlet.textSync(`jet-bots`, { horizontalLayout: 'full' })),
     );
     console.log('');
-    commands[command]();
+    await commands[command]();
   }
 }
 

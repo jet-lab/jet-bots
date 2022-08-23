@@ -1,7 +1,5 @@
+import { Protocol } from '@jet-lab/bot-sdk';
 import assert from 'assert';
-
-//TODO load this from a package.
-import { Protocol } from '../../../bot-sdk/src/';
 
 import { Bot } from './bot';
 

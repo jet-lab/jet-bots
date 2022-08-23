@@ -1,5 +1,4 @@
-//TODO load this from a package.
-import { Order, Protocol, PythOracle, Market } from '../../../bot-sdk/src/';
+import { Order, Protocol, PythOracle, Market } from '@jet-lab/bot-sdk';
 
 import { Bot } from './bot';
 

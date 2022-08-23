@@ -1,11 +1,5 @@
 #!/usr/bin/env ts-node
 
-import { Keypair } from '@solana/web3.js';
-import assert from 'assert';
-import * as fs from 'fs';
-import yargs from 'yargs/yargs';
-
-//TODO load this from a package.
 import {
   Configuration,
   Connection,
@@ -13,33 +7,17 @@ import {
   Protocol,
   PythOracle,
   SolanaProtocol,
-} from '../../bot-sdk/src/';
+} from '@jet-lab/bot-sdk';
+import { Keypair } from '@solana/web3.js';
+import assert from 'assert';
+import * as fs from 'fs';
+import * as path from 'path';
+import yargs from 'yargs/yargs';
 
 import { Bot } from './bots/bot';
 import { Crank } from './bots/crank';
 import { Maker } from './bots/maker';
 import { Taker } from './bots/taker';
-
-function createBot(
-  type: string,
-  protocol: Protocol,
-  oracles?: Record<string, PythOracle>,
-): Bot {
-  switch (type) {
-    case 'maker':
-      return new Maker(protocol, oracles!);
-    case 'taker':
-      assert(
-        protocol.configuration.cluster == 'devnet' ||
-          protocol.configuration.cluster == 'localnet',
-      );
-      return new Taker(protocol);
-    default: {
-      console.log(`Unhandled bot type: ${type}`);
-      process.exit();
-    }
-  }
-}
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -104,18 +82,17 @@ async function run() {
     },
   }).argv;
 
-  //TODO if the user is on devnet or localnet and they don't have account ask them if they want to create one, if not exit.
-
-  /*
   if (!fs.existsSync(args.k)) {
-    console.log(`Solana account '${args.k}' does not exist. Creating a new account.`);
-
+    console.log(
+      `Solana account '${args.k}' does not exist. Creating a new account.`,
+    );
     const keypair = Keypair.generate();
+    const dir = path.dirname(args.k);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(args.k, '[' + keypair.secretKey.toString() + ']');
-
-    //TODO airdrop some tokens to test with.
   }
-  */
 
   const protocol = new SolanaProtocol(
     args.c,
@@ -148,7 +125,22 @@ async function run() {
 
   //TODO if the user is on devnet or localnet and they don't have tokens ask them if they want to get airdrops.
 
-  const bot: Bot = createBot(args.b, protocol, oracles);
+  const bot: Bot = ((type: string) => {
+    switch (type) {
+      case 'maker':
+        return new Maker(protocol, oracles!);
+      case 'taker':
+        assert(
+          protocol.configuration.cluster == 'devnet' ||
+            protocol.configuration.cluster == 'localnet',
+        );
+        return new Taker(protocol);
+      default: {
+        console.log(`Unhandled bot type: ${type}`);
+        process.exit();
+      }
+    }
+  })(args.b);
 
   await protocol.createTokenAccounts();
   await protocol.createOpenOrders();
