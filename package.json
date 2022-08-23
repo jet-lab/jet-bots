@@ -20,12 +20,6 @@
       "pre-commit": "lint-staged"
     }
   },
-  "__prettier": {
-    "arrowParens": "avoid",
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "all"
-  },
   "commitlint": {
     "extends": [
       "@commitlint/config-conventional"
@@ -37,6 +31,7 @@
     "@typescript-eslint/parser": "^5.34.0",
     "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
+    "husky": "^8.0.1",
     "prettier": "^2.7.1",
     "ts-node": "^10.9.1",
     "typescript": "^4.7.4"
